@@ -10,12 +10,7 @@ type AppProvidersProps = {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      disableTransitionOnChange
-      enableSystem
-    >
+    <ThemeProvider>
       {children}
       <Toaster closeButton richColors position="top-right" />
     </ThemeProvider>

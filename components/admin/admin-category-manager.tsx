@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import type { AdminCategoryRecord, AdminTagRecord } from "@/lib/admin-data";
@@ -12,11 +12,23 @@ type AdminCategoryManagerProps = {
 };
 
 type ApiResponse = {
-  error?: string;
+  error?: string | { message?: string };
 };
 
-async function parseResponse(response: Response) {
-  return (await response.json()) as ApiResponse;
+async function parseResponse(response: Response): Promise<ApiResponse> {
+  try {
+    return (await response.json()) as ApiResponse;
+  } catch {
+    return {};
+  }
+}
+
+function getErrorMessage(result: ApiResponse, fallback: string): string {
+  if (typeof result.error === "string") {
+    return result.error;
+  }
+
+  return result.error?.message ?? fallback;
 }
 
 export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerProps) {
@@ -24,8 +36,11 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function createEntity(formData: FormData, endpoint: string, label: string) {
+  function createEntity(event: FormEvent<HTMLFormElement>, endpoint: string, label: string) {
+    event.preventDefault();
     setError(null);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const payload = {
       name: String(formData.get("name") ?? ""),
       slug: String(formData.get("slug") ?? ""),
@@ -41,13 +56,14 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
       const result = await parseResponse(response);
 
       if (!response.ok) {
-        const message = result.error ?? `${label} could not be created.`;
+        const message = getErrorMessage(result, `${label} could not be created.`);
         setError(message);
         toast.error(message);
         return;
       }
 
       toast.success(`${label} created`);
+      form.reset();
       router.refresh();
     });
   }
@@ -59,7 +75,7 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
       const result = await parseResponse(response);
 
       if (!response.ok) {
-        const message = result.error ?? `${label} could not be deleted.`;
+        const message = getErrorMessage(result, `${label} could not be deleted.`);
         setError(message);
         toast.error(message);
         return;
@@ -72,10 +88,17 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      {error ? <p className="xl:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
+      {error ? (
+        <p className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 xl:col-span-2 dark:text-red-300">
+          {error}
+        </p>
+      ) : null}
       <section className="rounded-3xl border bg-background p-6 shadow-sm">
         <h2 className="text-xl font-semibold">Categories</h2>
-        <form action={(formData) => createEntity(formData, "/api/admin/categories", "Category")} className="mt-5 grid gap-3">
+        <form
+          onSubmit={(event) => createEntity(event, "/api/admin/categories", "Category")}
+          className="mt-5 grid gap-3"
+        >
           <input name="name" required minLength={2} placeholder="Category name" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-foreground" />
           <input name="slug" placeholder="Optional slug" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-foreground" />
           <textarea name="description" rows={3} placeholder="Optional description" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-foreground" />
@@ -97,7 +120,10 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
       </section>
       <section className="rounded-3xl border bg-background p-6 shadow-sm">
         <h2 className="text-xl font-semibold">Tags</h2>
-        <form action={(formData) => createEntity(formData, "/api/admin/tags", "Tag")} className="mt-5 grid gap-3">
+        <form
+          onSubmit={(event) => createEntity(event, "/api/admin/tags", "Tag")}
+          className="mt-5 grid gap-3"
+        >
           <input name="name" required minLength={2} placeholder="Tag name" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-foreground" />
           <input name="slug" placeholder="Optional slug" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-foreground" />
           <input name="description" type="hidden" value="" readOnly />
