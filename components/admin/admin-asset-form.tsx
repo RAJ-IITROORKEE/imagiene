@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import {
+  getAdminApiErrorMessage,
+  parseAdminApiResponse,
+} from "@/components/admin/admin-form-response";
 import { ASSET_ACCESS_LEVELS, ASSET_TYPES } from "@/constants/asset-types";
 import type { AdminAssetFormRecord } from "@/lib/admin-data";
 
@@ -17,11 +21,6 @@ type AdminAssetFormProps = {
   asset?: AdminAssetFormRecord | null;
   categories: OptionRecord[];
   tags: OptionRecord[];
-};
-
-type ApiResponse = {
-  data?: unknown;
-  error?: string;
 };
 
 function stringValue(value: string | number | null | undefined) {
@@ -61,10 +60,10 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const result = (await response.json()) as ApiResponse;
+      const result = await parseAdminApiResponse(response);
 
       if (!response.ok) {
-        const message = result.error ?? "Asset could not be saved.";
+        const message = getAdminApiErrorMessage(result, "Asset could not be saved.");
         setError(message);
         toast.error(message);
         return;

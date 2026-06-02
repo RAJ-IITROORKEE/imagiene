@@ -25,6 +25,7 @@ export type RateLimitResult = {
 
 const localBuckets = new Map<string, LocalBucket>();
 const upstashLimiters = new Map<string, Ratelimit>();
+const RATE_LIMIT_TIMEOUT_MS = 1_500;
 
 function durationToMilliseconds(duration: Duration): number {
   const match = duration.match(/^(\d+)\s?(ms|s|m|h|d)$/);
@@ -97,6 +98,21 @@ function getUpstashLimiter(options: RateLimitOptions): Ratelimit | null {
   return limiter;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error("Rate limit service timed out")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 export async function rateLimit(
   identifier: string,
   options: RateLimitOptions,
@@ -107,14 +123,22 @@ export async function rateLimit(
     return localRateLimit(identifier, options);
   }
 
-  const result = await limiter.limit(identifier);
+  try {
+    const result = await withTimeout(limiter.limit(identifier), RATE_LIMIT_TIMEOUT_MS);
 
-  return {
-    success: result.success,
-    limit: result.limit,
-    remaining: result.remaining,
-    reset: result.reset,
-  };
+    return {
+      success: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      reset: result.reset,
+    };
+  } catch {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Rate limit service unavailable; falling back to local limiter.");
+    }
+
+    return localRateLimit(identifier, options);
+  }
 }
 
 export function getRateLimitIdentifier(request: NextRequest, scope = "ip"): string {

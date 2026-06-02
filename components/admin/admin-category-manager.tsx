@@ -4,32 +4,16 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import {
+  getAdminApiErrorMessage,
+  parseAdminApiResponse,
+} from "@/components/admin/admin-form-response";
 import type { AdminCategoryRecord, AdminTagRecord } from "@/lib/admin-data";
 
 type AdminCategoryManagerProps = {
   categories: AdminCategoryRecord[];
   tags: AdminTagRecord[];
 };
-
-type ApiResponse = {
-  error?: string | { message?: string };
-};
-
-async function parseResponse(response: Response): Promise<ApiResponse> {
-  try {
-    return (await response.json()) as ApiResponse;
-  } catch {
-    return {};
-  }
-}
-
-function getErrorMessage(result: ApiResponse, fallback: string): string {
-  if (typeof result.error === "string") {
-    return result.error;
-  }
-
-  return result.error?.message ?? fallback;
-}
 
 export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerProps) {
   const router = useRouter();
@@ -53,10 +37,10 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const result = await parseResponse(response);
+      const result = await parseAdminApiResponse(response);
 
       if (!response.ok) {
-        const message = getErrorMessage(result, `${label} could not be created.`);
+        const message = getAdminApiErrorMessage(result, `${label} could not be created.`);
         setError(message);
         toast.error(message);
         return;
@@ -72,10 +56,10 @@ export function AdminCategoryManager({ categories, tags }: AdminCategoryManagerP
     setError(null);
     startTransition(async () => {
       const response = await fetch(endpoint, { method: "DELETE" });
-      const result = await parseResponse(response);
+      const result = await parseAdminApiResponse(response);
 
       if (!response.ok) {
-        const message = getErrorMessage(result, `${label} could not be deleted.`);
+        const message = getAdminApiErrorMessage(result, `${label} could not be deleted.`);
         setError(message);
         toast.error(message);
         return;

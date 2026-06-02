@@ -4,15 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import {
+  getAdminApiErrorMessage,
+  parseAdminApiResponse,
+} from "@/components/admin/admin-form-response";
 import { PLAN_TYPES } from "@/constants/plans";
 import type { AdminUserDetail } from "@/lib/admin-data";
 
 type AdminUserFormProps = {
   user: AdminUserDetail;
-};
-
-type ApiResponse = {
-  error?: string;
 };
 
 export function AdminUserForm({ user }: AdminUserFormProps) {
@@ -34,10 +34,10 @@ export function AdminUserForm({ user }: AdminUserFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const result = (await response.json()) as ApiResponse;
+      const result = await parseAdminApiResponse(response);
 
       if (!response.ok) {
-        const message = result.error ?? "User could not be updated.";
+        const message = getAdminApiErrorMessage(result, "User could not be updated.");
         setError(message);
         toast.error(message);
         return;
