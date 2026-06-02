@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PlanType {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum AssetType {
+  ICON
+  ILLUSTRATION
+  DIAGRAM
+  VECTOR
+  PNG
+  SVG
+}
+
+enum AssetAccessLevel {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId       String          @unique
+  email         String          @unique
+  name          String?
+  imageUrl      String?
+  role          UserRole        @default(USER)
+  plan          PlanType        @default(FREE)
+  isActive      Boolean         @default(true)
+  bookmarks     Bookmark[]
+  downloads     Download[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  auditLogs     AdminAuditLog[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([role])
+  @@index([plan])
+  @@index([createdAt])
+}
+
+model Asset {
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  slug               String           @unique
+  description        String
+  type               AssetType
+  accessLevel        AssetAccessLevel @default(FREE)
+  fileUrl            String
+  previewUrl         String
+  cloudinaryPublicId String?
+  format             String
+  width              Int?
+  height             Int?
+  fileSize           Int?
+  categoryId         String           @db.ObjectId
+  category           Category         @relation(fields: [categoryId], references: [id])
+  tagIds             String[]         @db.ObjectId
+  tags               Tag[]            @relation(fields: [tagIds], references: [id])
+  isPublished        Boolean          @default(false)
+  downloadCount      Int              @default(0)
+  deletedAt          DateTime?
+  bookmarks          Bookmark[]
+  downloads          Download[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([categoryId])
+  @@index([type])
+  @@index([accessLevel])
+  @@index([isPublished])
+  @@index([downloadCount])
+  @@index([createdAt])
+}
+
+model Category {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String   @unique
+  description String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Tag {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  assetIds  String[] @db.ObjectId
+  assets    Asset[]  @relation(fields: [assetIds], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Bookmark {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId   String   @db.ObjectId
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+}
+
+model Download {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId   String   @db.ObjectId
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String             @db.ObjectId
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              PlanType
+  status            SubscriptionStatus @default(ACTIVE)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  startedAt         DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([plan])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Payment {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String        @db.ObjectId
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount            Int
+  currency          String        @default("INR")
+  plan              PlanType
+  status            PaymentStatus @default(CREATED)
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([plan])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId    String   @db.ObjectId
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+}
