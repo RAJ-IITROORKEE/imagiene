@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Subscription } from "@prisma/client";
+import type { Subscription } from "@/lib/generated/prisma";
 
 import type { Plan } from "@/constants/plans";
 
@@ -28,7 +28,7 @@ export function PlanCard({ plan, subscription }: PlanCardProps) {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{plan.description}</p>
         </div>
         <Link
-          href={isFree ? "/pricing" : "/dashboard/billing"}
+          href={isFree ? "/#pricing" : "/dashboard/billing"}
           className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90"
         >
           {isFree ? "Upgrade access" : "Manage billing"}

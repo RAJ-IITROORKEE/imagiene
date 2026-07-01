@@ -1,11 +1,10 @@
 import Link from "next/link";
+import { Bookmark } from "lucide-react";
 
-import { AssetActions } from "@/components/library/asset-actions";
 import {
   assetAccessLevelLabels,
-  assetTypeLabels,
 } from "@/constants/asset-types";
-import { getAssetAccessMessage } from "@/lib/asset-access";
+import { getProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import type { LibraryAsset } from "@/lib/library-data";
 
 type AssetCardProps = {
@@ -13,48 +12,33 @@ type AssetCardProps = {
 };
 
 export function AssetCard({ asset }: AssetCardProps) {
-  const accessMessage = getAssetAccessMessage(asset.access);
-
   return (
-    <article className="group overflow-hidden rounded-3xl border bg-background shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <Link href={`/library/${asset.id}`} className="block">
-        <div
-          className="aspect-[4/3] border-b bg-muted bg-cover bg-center"
-          style={{ backgroundImage: `url(${asset.previewUrl})` }}
-          aria-label={asset.title}
-        />
-      </Link>
-      <div className="space-y-4 p-5">
-        <div>
-          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            <span>{assetTypeLabels[asset.type]}</span>
-            <span>{assetAccessLevelLabels[asset.accessLevel]}</span>
-          </div>
-          <Link href={`/library/${asset.id}`} className="mt-2 block text-lg font-semibold">
-            {asset.title}
-          </Link>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-            {asset.description}
-          </p>
+    <article className="group overflow-hidden rounded-[var(--radius-lg)] border bg-card shadow-sm transition-colors hover:border-primary/40">
+      <Link href={`/library/${asset.id}`} className="block p-2">
+        <div className="relative overflow-hidden rounded-[var(--radius-md)] bg-muted">
+          <span className="absolute left-2 top-2 z-10 rounded-[var(--radius-full)] bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm">
+            {assetAccessLevelLabels[asset.accessLevel]}
+          </span>
+          <span className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-full)] bg-background/95 text-foreground shadow-sm">
+            <Bookmark className="h-4 w-4" fill={asset.bookmarked ? "currentColor" : "none"} />
+          </span>
+          <div
+            className="aspect-[4/3] bg-muted bg-cover bg-center"
+            style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(asset.id)})` }}
+            aria-label={asset.title}
+          />
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <Link href={`/library/category/${asset.category.slug}`} className="rounded-full border px-3 py-1 hover:bg-muted">
+      </Link>
+      <div className="px-4 pb-4 pt-2">
+        <Link href={`/library/${asset.id}`} className="block truncate text-sm font-semibold">
+          {asset.title}
+        </Link>
+        <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <Link href={`/library/category/${asset.category.slug}`} className="truncate hover:text-foreground">
             {asset.category.name}
           </Link>
-          <span className="rounded-full border px-3 py-1">{asset.downloadCount} downloads</span>
+          <span>{asset.downloadCount} downloads</span>
         </div>
-        {accessMessage ? (
-          <p className="rounded-2xl bg-muted px-3 py-2 text-xs text-muted-foreground">
-            {accessMessage}
-          </p>
-        ) : null}
-        <AssetActions
-          assetId={asset.id}
-          canDownload={asset.access.allowed}
-          initialBookmarked={asset.bookmarked}
-          accessMessage={accessMessage}
-          requiredPlan={asset.access.requiredPlan}
-        />
       </div>
     </article>
   );

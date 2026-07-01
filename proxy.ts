@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isProtectedRoute = createRouteMatcher([
-  "/admin(.*)",
   "/checkout(.*)",
   "/dashboard(.*)",
   "/api/admin(.*)",
@@ -9,8 +8,10 @@ const isProtectedRoute = createRouteMatcher([
   "/api/user(.*)",
 ]);
 
+const isAdminLoginRoute = createRouteMatcher(["/admin/login(.*)"]);
+
 export const proxy = clerkMiddleware(async (auth, request) => {
-  if (isProtectedRoute(request)) {
+  if (isProtectedRoute(request) && !isAdminLoginRoute(request)) {
     await auth.protect();
   }
 });

@@ -4,6 +4,7 @@ import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { getAssetAccessDecision, getAssetAccessMessage } from "@/lib/asset-access";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getR2DownloadUrl, isExternalUrl } from "@/lib/r2";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { assetIdParamsSchema } from "@/lib/validators";
 
@@ -58,10 +59,12 @@ export async function POST(_request: NextRequest, context: DownloadRouteContext)
       }),
     ]);
 
+    const fileUrl = isExternalUrl(asset.fileUrl) ? asset.fileUrl : getR2DownloadUrl(asset.fileUrl);
+
     return ok({
       data: {
         downloadId: download.id,
-        fileUrl: asset.fileUrl,
+        fileUrl,
       },
     });
   } catch (error) {

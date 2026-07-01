@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 const navItems = [
   { label: "Library", href: "/library" },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Pricing", href: "/#pricing" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ] as const;
@@ -23,7 +23,7 @@ export function MarketingNav() {
         <SiteLogo />
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === "/#pricing" ? false : pathname === item.href;
 
             return (
               <Link

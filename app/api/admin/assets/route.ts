@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/lib/generated/prisma";
 import { NextRequest } from "next/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...input,
         slug: input.slug ?? createSlug(input.title),
+        deletedAt: null,
       },
       include: {
         category: true,

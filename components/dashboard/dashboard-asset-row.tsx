@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AssetActions } from "@/components/library/asset-actions";
 import { assetAccessLevelLabels, assetTypeLabels } from "@/constants/asset-types";
 import { getAssetAccessMessage } from "@/lib/asset-access";
+import { getProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import type { DashboardAsset } from "@/lib/dashboard-data";
 
 type DashboardAssetRowProps = {
@@ -19,7 +20,7 @@ export function DashboardAssetRow({ asset, timestamp, timestampLabel }: Dashboar
       <Link href={`/library/${asset.id}`} className="block overflow-hidden rounded-2xl border bg-muted">
         <div
           className="aspect-[4/3] bg-cover bg-center"
-          style={{ backgroundImage: `url(${asset.previewUrl})` }}
+          style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(asset.id)})` }}
           aria-label={asset.title}
         />
       </Link>
@@ -47,7 +48,6 @@ export function DashboardAssetRow({ asset, timestamp, timestampLabel }: Dashboar
           canDownload={asset.access.allowed}
           initialBookmarked={asset.bookmarked}
           accessMessage={accessMessage}
-          requiredPlan={asset.access.requiredPlan}
         />
       </div>
     </article>

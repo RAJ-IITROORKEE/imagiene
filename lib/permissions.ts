@@ -1,4 +1,4 @@
-import type { AssetAccessLevel, PlanType, User, UserRole } from "@prisma/client";
+import type { AssetAccessLevel, PlanType, User, UserRole } from "@/lib/generated/prisma";
 
 const PLAN_RANK: Record<PlanType, number> = {
   FREE: 0,

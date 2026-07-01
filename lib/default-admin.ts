@@ -1,4 +1,4 @@
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/generated/prisma";
 
 const FALLBACK_ADMIN_EMAILS = ["raj_r@mt.iitr.ac.in"];
 

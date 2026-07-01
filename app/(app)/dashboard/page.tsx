@@ -84,7 +84,7 @@ export default async function DashboardPage() {
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 Compare Pro and Premium access levels before downloading locked assets.
               </p>
-              <Link href="/pricing" className="mt-5 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-background">
+              <Link href="/#pricing" className="mt-5 inline-flex rounded-[var(--radius-md)] bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
                 Compare plans
               </Link>
             </div>

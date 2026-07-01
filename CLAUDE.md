@@ -113,7 +113,7 @@ return NextResponse.json({ success: false, error: "Message" }, { status: 400 })
 
 ## 10. Cloudinary Rules
 
-- Use public preview image for listing.
+- Use protected preview image delivery for listings; store preview object keys and render through the preview API instead of permanent public bucket URLs.
 - Use gated original file for download.
 - Use server-generated signed upload for admin.
 - Store public IDs in DB.

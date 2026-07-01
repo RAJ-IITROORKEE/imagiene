@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import type { Payment } from "@prisma/client";
+import type { Payment } from "@/lib/generated/prisma";
 
 import { planById } from "@/constants/plans";
 import { prisma } from "@/lib/prisma";

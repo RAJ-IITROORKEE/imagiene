@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { getAssetAccessDecision, getAssetAccessMessage } from "@/lib/asset-access";
+import { withProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import { getCurrentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -37,7 +38,7 @@ export async function GET(_request: NextRequest, context: AssetRouteContext) {
 
     return ok({
       data: {
-        ...asset,
+        ...withProtectedAssetPreviewUrl(asset),
         access,
         accessMessage: getAssetAccessMessage(access),
       },

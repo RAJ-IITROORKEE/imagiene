@@ -467,7 +467,7 @@ Never rely on frontend-only checks for admin pages or APIs.
 
 Use two delivery levels:
 
-1. Public preview image: optimized, watermarked if needed, safe to show in listing.
+1. Protected preview image: optimized, watermarked if needed, stored privately and rendered through the preview API instead of permanent public bucket URLs.
 2. Original/high-resolution download file: gated through backend access check.
 
 Recommended asset fields:

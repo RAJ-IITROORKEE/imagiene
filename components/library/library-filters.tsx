@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 
@@ -26,22 +25,13 @@ export function LibraryFilters({ query }: LibraryFiltersProps) {
   }
 
   return (
-    <form className="rounded-3xl border bg-muted/20 p-4 sm:p-5" action={pathname}>
-      <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_160px_auto]">
-        <label className="relative block">
-          <span className="sr-only">Search assets</span>
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            name="q"
-            defaultValue={query.q ?? ""}
-            placeholder="Search diagrams, icons, vectors..."
-            className="h-11 w-full rounded-full border bg-background pl-11 pr-4 text-sm outline-none transition focus:border-foreground"
-          />
-        </label>
+    <form className="flex flex-col gap-3 border-y bg-card px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between" action={pathname}>
+      {query.q ? <input type="hidden" name="q" value={query.q} /> : null}
+      <div className="grid gap-3 sm:grid-cols-3 lg:w-[520px]">
         <select
           name="type"
           defaultValue={query.type ?? ""}
-          className="h-11 rounded-full border bg-background px-4 text-sm outline-none transition focus:border-foreground"
+          className="h-10 rounded-[var(--radius-md)] border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
         >
           <option value="">All types</option>
           {ASSET_TYPES.map((type) => (
@@ -53,7 +43,7 @@ export function LibraryFilters({ query }: LibraryFiltersProps) {
         <select
           name="accessLevel"
           defaultValue={query.accessLevel ?? ""}
-          className="h-11 rounded-full border bg-background px-4 text-sm outline-none transition focus:border-foreground"
+          className="h-10 rounded-[var(--radius-md)] border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
         >
           <option value="">All access</option>
           {ASSET_ACCESS_LEVELS.map((level) => (
@@ -65,16 +55,19 @@ export function LibraryFilters({ query }: LibraryFiltersProps) {
         <select
           name="sort"
           defaultValue={query.sort}
-          className="h-11 rounded-full border bg-background px-4 text-sm outline-none transition focus:border-foreground"
+          className="h-10 rounded-[var(--radius-md)] border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
         >
           <option value="newest">Newest</option>
           <option value="popular">Popular</option>
           <option value="title">Title</option>
         </select>
+      </div>
+      <div className="flex items-center gap-3">
+        <p className="hidden text-sm text-muted-foreground lg:block">Refine results</p>
         <div className="flex gap-2">
           <button
             type="submit"
-            className="h-11 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+            className="h-10 rounded-[var(--radius-md)] bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Filter
           </button>
@@ -82,7 +75,7 @@ export function LibraryFilters({ query }: LibraryFiltersProps) {
             type="button"
             onClick={clearFilters}
             disabled={isPending}
-            className="h-11 rounded-full border px-5 text-sm font-semibold transition hover:bg-background disabled:opacity-60"
+            className="h-10 rounded-[var(--radius-md)] border px-5 text-sm font-semibold transition-colors hover:bg-muted disabled:opacity-60"
           >
             Clear
           </button>

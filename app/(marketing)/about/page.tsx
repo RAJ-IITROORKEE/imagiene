@@ -16,7 +16,7 @@ export default function AboutPage() {
   return (
     <main className="px-6 py-16 sm:px-10 lg:px-16">
       <section className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-3xl border bg-muted/30 p-8 sm:p-10">
+        <div className="rounded-[var(--radius-lg)] border bg-muted/30 p-8 sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             About Imagiene
           </p>
@@ -30,7 +30,7 @@ export default function AboutPage() {
         </div>
         <div className="grid gap-4">
           {principles.map((principle) => (
-            <article key={principle} className="rounded-3xl border bg-background p-6">
+            <article key={principle} className="rounded-[var(--radius-lg)] border bg-card p-6">
               <h2 className="text-xl font-semibold">{principle}</h2>
               <p className="mt-3 leading-7 text-muted-foreground">
                 Phase 1 keeps the product practical: curated assets, bookmarks,
@@ -40,7 +40,7 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
-      <section className="mx-auto mt-8 max-w-7xl rounded-3xl border bg-primary p-8 text-primary-foreground sm:p-10">
+      <section className="mx-auto mt-8 max-w-7xl rounded-[var(--radius-lg)] border bg-primary p-8 text-primary-foreground sm:p-10">
         <h2 className="text-3xl font-semibold tracking-tight">Start with the library.</h2>
         <p className="mt-3 max-w-2xl text-primary-foreground/75">
           Browse the available catalog now, then upgrade when your work needs Pro
@@ -48,7 +48,7 @@ export default function AboutPage() {
         </p>
         <Link
           href="/library"
-          className="mt-6 inline-flex rounded-full bg-primary-foreground px-6 py-3 text-sm font-semibold text-primary transition hover:opacity-90"
+          className="mt-6 inline-flex rounded-[var(--radius-md)] bg-primary-foreground px-6 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90"
         >
           Browse assets
         </Link>

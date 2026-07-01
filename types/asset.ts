@@ -22,7 +22,6 @@ export type Asset = {
   accessLevel: AssetAccessLevel;
   fileUrl: string;
   previewUrl: string;
-  cloudinaryPublicId?: string | null;
   format: string;
   width?: number | null;
   height?: number | null;

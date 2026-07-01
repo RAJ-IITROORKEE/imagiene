@@ -1,4 +1,4 @@
-import type { Prisma, User } from "@prisma/client";
+import type { Prisma, User } from "@/lib/generated/prisma";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";

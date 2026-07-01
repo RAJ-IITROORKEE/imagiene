@@ -7,7 +7,7 @@ export const siteConfig = {
   links: {
     home: "/",
     library: "/library",
-    pricing: "/pricing",
+    pricing: "/#pricing",
     dashboard: "/dashboard",
     admin: "/admin",
   },

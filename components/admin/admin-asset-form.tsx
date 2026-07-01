@@ -1,6 +1,6 @@
 "use client";
 
-import type { AssetAccessLevel, AssetType } from "@prisma/client";
+import type { AssetAccessLevel, AssetType } from "@/lib/generated/prisma";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -23,13 +23,57 @@ type AdminAssetFormProps = {
   tags: OptionRecord[];
 };
 
+type R2UploadResponse = {
+  data?: {
+    key: string;
+    uploadUrl: string;
+    publicUrl: string | null;
+    headers: Record<string, string>;
+  };
+  error?: { message?: string };
+};
+
 function stringValue(value: string | number | null | undefined) {
   return value == null ? "" : String(value);
+}
+
+function isFilledFile(value: FormDataEntryValue | null): value is File {
+  return value instanceof File && value.size > 0;
+}
+
+async function uploadR2File(file: File, purpose: "asset" | "preview") {
+  const signResponse = await fetch("/api/admin/r2/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      purpose,
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+    }),
+  });
+  const signed = (await signResponse.json().catch(() => ({}))) as R2UploadResponse;
+
+  if (!signResponse.ok || !signed.data) {
+    throw new Error(signed.error?.message ?? "Could not prepare R2 upload.");
+  }
+
+  const uploadResponse = await fetch(signed.data.uploadUrl, {
+    method: "PUT",
+    headers: signed.data.headers,
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("R2 upload failed. Check bucket CORS and token permissions.");
+  }
+
+  return signed.data;
 }
 
 export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = Boolean(asset);
 
@@ -44,7 +88,6 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
       accessLevel: String(formData.get("accessLevel") ?? "FREE") as AssetAccessLevel,
       fileUrl: String(formData.get("fileUrl") ?? ""),
       previewUrl: String(formData.get("previewUrl") ?? ""),
-      cloudinaryPublicId: String(formData.get("cloudinaryPublicId") ?? ""),
       format: String(formData.get("format") ?? ""),
       width: String(formData.get("width") ?? ""),
       height: String(formData.get("height") ?? ""),
@@ -53,25 +96,57 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
       tagIds: formData.getAll("tagIds").map(String),
       isPublished: formData.get("isPublished") === "on",
     };
+    const assetFile = formData.get("assetFile");
+    const previewFile = formData.get("previewFile");
 
     startTransition(async () => {
-      const response = await fetch(isEditing ? `/api/admin/assets/${asset?.id}` : "/api/admin/assets", {
-        method: isEditing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const result = await parseAdminApiResponse(response);
+      setIsUploading(true);
 
-      if (!response.ok) {
-        const message = getAdminApiErrorMessage(result, "Asset could not be saved.");
+      try {
+        if (isFilledFile(previewFile)) {
+          const uploadedPreview = await uploadR2File(previewFile, "preview");
+          payload.previewUrl = uploadedPreview.key;
+        }
+
+        if (isFilledFile(assetFile)) {
+          const uploadedAsset = await uploadR2File(assetFile, "asset");
+          payload.fileUrl = uploadedAsset.key;
+          payload.fileSize = payload.fileSize || String(assetFile.size);
+          payload.format = payload.format || assetFile.name.split(".").pop()?.toUpperCase() || "FILE";
+        }
+
+        if (!payload.fileUrl.trim()) {
+          throw new Error("Select a private asset file or enter an existing private R2 object key.");
+        }
+
+        if (!payload.previewUrl.trim()) {
+          throw new Error("Select a protected preview file or enter an existing private R2 preview object key.");
+        }
+
+        const response = await fetch(isEditing ? `/api/admin/assets/${asset?.id}` : "/api/admin/assets", {
+          method: isEditing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const result = await parseAdminApiResponse(response);
+
+        if (!response.ok) {
+          const message = getAdminApiErrorMessage(result, "Asset could not be saved.");
+          setError(message);
+          toast.error(message);
+          return;
+        }
+
+        toast.success(isEditing ? "Asset updated" : "Asset created");
+        router.push("/admin/assets");
+        router.refresh();
+      } catch (uploadError) {
+        const message = uploadError instanceof Error ? uploadError.message : "Asset upload failed.";
         setError(message);
         toast.error(message);
-        return;
+      } finally {
+        setIsUploading(false);
       }
-
-      toast.success(isEditing ? "Asset updated" : "Asset created");
-      router.push("/admin/assets");
-      router.refresh();
     });
   }
 
@@ -112,19 +187,28 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">
-          Asset file URL
-          <input name="fileUrl" type="url" required defaultValue={asset?.fileUrl} placeholder="Cloudinary secure URL or CDN path" className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          Private asset file
+          <input name="assetFile" type="file" required={!asset?.fileUrl} className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          <span className="text-xs font-normal text-muted-foreground">Uploaded to the private R2 bucket. Users receive signed download URLs after access checks.</span>
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Preview URL
-          <input name="previewUrl" type="url" required defaultValue={asset?.previewUrl} placeholder="Cloudinary preview URL" className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          Protected preview file
+          <input name="previewFile" type="file" accept="image/*,.svg,.pdf" required={!asset?.previewUrl} className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          <span className="text-xs font-normal text-muted-foreground">Uploaded to the private R2 bucket. Public pages render it through the protected preview API, not a permanent bucket URL.</span>
         </label>
       </div>
-      <label className="grid gap-2 text-sm font-medium">
-        Cloudinary public ID or selected path
-        <input name="cloudinaryPublicId" defaultValue={asset?.cloudinaryPublicId ?? ""} placeholder="imagiene/assets/cell-diagram" className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
-        <span className="text-xs font-normal text-muted-foreground">Use the Cloudinary upload/select result here, then paste its file and preview secure URLs above.</span>
-      </label>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="grid gap-2 text-sm font-medium">
+          Private R2 object key
+          <input name="fileUrl" defaultValue={asset?.fileUrl} placeholder="imagiene/assets/2026-06-30/file.svg" className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          <span className="text-xs font-normal text-muted-foreground">Leave blank when selecting a new private asset file.</span>
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          Private R2 preview object key
+          <input name="previewUrl" defaultValue={asset?.previewUrl} placeholder="imagiene/previews/2026-06-30/preview.png" className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground" />
+          <span className="text-xs font-normal text-muted-foreground">Leave blank when selecting a new preview file.</span>
+        </label>
+      </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
           Width
@@ -159,8 +243,8 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
         Publish asset
       </label>
       <div className="flex flex-wrap gap-3">
-        <button disabled={isPending} className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-          {isPending ? "Saving..." : isEditing ? "Save asset" : "Create asset"}
+        <button disabled={isPending || isUploading} className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+          {isPending || isUploading ? "Saving..." : isEditing ? "Save asset" : "Create asset"}
         </button>
       </div>
     </form>

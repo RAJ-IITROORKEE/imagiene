@@ -1,7 +1,7 @@
 export const marketingRoutes = [
   { label: "Home", href: "/" },
   { label: "Library", href: "/library" },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Pricing", href: "/#pricing" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ] as const;
@@ -15,22 +15,23 @@ export const dashboardRoutes = [
 ] as const;
 
 export const adminRoutes = [
-  { label: "Overview", href: "/admin" },
+  { label: "Overview", href: "/admin/dashboard" },
   { label: "Assets", href: "/admin/assets" },
   { label: "Categories", href: "/admin/categories" },
   { label: "Users", href: "/admin/users" },
   { label: "Subscriptions", href: "/admin/subscriptions" },
   { label: "Payments", href: "/admin/payments" },
+  { label: "Messages", href: "/admin/contact-messages" },
   { label: "Settings", href: "/admin/settings" },
 ] as const;
 
 export const routes = {
   home: "/",
-  pricing: "/pricing",
+  pricing: "/#pricing",
   signIn: "/sign-in",
   signUp: "/sign-up",
   library: "/library",
   dashboard: "/dashboard",
   checkout: "/checkout",
-  admin: "/admin",
+  admin: "/admin/dashboard",
 } as const;

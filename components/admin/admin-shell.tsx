@@ -1,27 +1,30 @@
-import type { ReactNode } from "react";
-import { UserButton } from "@clerk/nextjs";
+import type { CSSProperties, ReactNode } from "react";
 
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminAppSidebar } from "@/components/admin/admin-app-sidebar";
+import { AdminSiteHeader } from "@/components/admin/admin-site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AdminShellProps = {
   children: ReactNode;
   adminName?: string | null;
+  adminEmail?: string | null;
 };
 
-export function AdminShell({ children, adminName }: AdminShellProps) {
+export function AdminShell({ children, adminName, adminEmail }: AdminShellProps) {
   return (
-    <div className="min-h-screen bg-background lg:pl-72">
-      <AdminNav />
-      <div className="min-h-screen">
-        <header className="flex items-center justify-between border-b px-6 py-4 sm:px-10 lg:px-12">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Admin panel</p>
-            <p className="text-lg font-semibold">{adminName ?? "Imagiene administrator"}</p>
-          </div>
-          <UserButton />
-        </header>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "18rem",
+          "--sidebar-width-icon": "3.25rem",
+        } as CSSProperties
+      }
+    >
+      <AdminAppSidebar adminName={adminName} adminEmail={adminEmail} />
+      <SidebarInset>
+        <AdminSiteHeader />
         {children}
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "prebuild": "prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "node prisma/seed.mjs"
+    "prisma:generate": "prisma generate",
+    "db:seed": "node prisma/seed.mjs",
+    "r2:migrate-previews": "node scripts/migrate-public-previews-to-private-r2.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.4.2",
@@ -17,13 +20,11 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "class-variance-authority": "^0.7.1",
-    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.17.0",
     "nanoid": "^5.1.11",
     "next": "16.2.7",
-    "next-cloudinary": "^6.17.5",
     "next-themes": "^0.4.6",
     "prisma": "^6.19.3",
     "razorpay": "^2.9.6",

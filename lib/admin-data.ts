@@ -1,6 +1,7 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/lib/generated/prisma";
 
 import { requireAdmin } from "@/lib/admin";
+import { countContactMessages, getRecentContactMessages, listContactMessages } from "@/lib/contact-messages";
 import { prisma } from "@/lib/prisma";
 
 export type AdminSearchParams = Record<string, string | string[] | undefined>;
@@ -30,11 +31,25 @@ function cleanParam(params: AdminSearchParams, key: string): string | undefined 
 export async function getAdminAnalyticsData() {
   await requireAdmin();
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const monthStarts = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setHours(0, 0, 0, 0);
+    date.setMonth(date.getMonth() - (5 - index));
+
+    return date;
+  });
+
   const [
     userCount,
     activeUserCount,
+    todayUserCount,
     assetCount,
     publishedAssetCount,
+    draftAssetCount,
     categoryCount,
     tagCount,
     bookmarkCount,
@@ -44,11 +59,19 @@ export async function getAdminAnalyticsData() {
     revenue,
     recentPayments,
     popularAssets,
+    recentUsers,
+    planGroups,
+    assetTypeGroups,
+    recentDownloads,
+    recentContacts,
+    unreadContactCount,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { createdAt: { gte: startOfToday } } }),
     prisma.asset.count({ where: { deletedAt: null } }),
     prisma.asset.count({ where: { deletedAt: null, isPublished: true } }),
+    prisma.asset.count({ where: { deletedAt: null, isPublished: false } }),
     prisma.category.count(),
     prisma.tag.count(),
     prisma.bookmark.count(),
@@ -68,24 +91,82 @@ export async function getAdminAnalyticsData() {
       take: 5,
       include: { category: true },
     }),
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: { _count: { select: { downloads: true, bookmarks: true, payments: true } } },
+    }),
+    prisma.user.groupBy({ by: ["plan"], _count: { _all: true } }),
+    prisma.asset.groupBy({
+      by: ["type"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+    prisma.download.findMany({
+      where: { createdAt: { gte: monthStarts[0] } },
+      select: { createdAt: true },
+    }),
+    getRecentContactMessages(4),
+    countContactMessages("NEW"),
   ]);
+
+  const downloadTrend = monthStarts.map((start, index) => {
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+
+    return {
+      label: start.toLocaleString("en-IN", { month: "short" }),
+      value: recentDownloads.filter((download) => download.createdAt >= start && download.createdAt < end).length,
+      isCurrent: index === monthStarts.length - 1,
+    };
+  });
 
   return {
     counts: {
       users: userCount,
       activeUsers: activeUserCount,
+      usersToday: todayUserCount,
       assets: assetCount,
       publishedAssets: publishedAssetCount,
+      draftAssets: draftAssetCount,
       categories: categoryCount,
       tags: tagCount,
       bookmarks: bookmarkCount,
       downloads: downloadCount,
       activeSubscriptions: activeSubscriptionCount,
       paidPayments: paidPaymentCount,
+      unreadContacts: unreadContactCount,
     },
     revenuePaise: revenue._sum.amount ?? 0,
     recentPayments,
     popularAssets,
+    recentUsers,
+    recentContacts,
+    planBreakdown: planGroups.map((group) => ({ label: group.plan, value: group._count._all })),
+    assetTypeBreakdown: assetTypeGroups.map((group) => ({ label: group.type, value: group._count._all })),
+    downloadTrend,
+  };
+}
+
+export async function getAdminContactMessages(params: AdminSearchParams) {
+  await requireAdmin();
+
+  const page = pageParam(params);
+  const q = cleanParam(params, "q");
+  const status = cleanParam(params, "status");
+  const normalizedStatus = status === "NEW" || status === "READ" || status === "RESOLVED" ? status : undefined;
+  const [{ total, messages }, unreadCount] = await Promise.all([
+    listContactMessages({ q, status: normalizedStatus, page, pageSize: DEFAULT_PAGE_SIZE }),
+    countContactMessages("NEW"),
+  ]);
+
+  return {
+    messages,
+    unreadCount,
+    page,
+    total,
+    pageCount: Math.ceil(total / DEFAULT_PAGE_SIZE),
+    query: { q, status },
   };
 }
 
@@ -285,10 +366,11 @@ export async function getAdminSettingsData() {
       clerkWebhook: Boolean(process.env.CLERK_WEBHOOK_SECRET),
       razorpay: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
       razorpayWebhook: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET),
-      cloudinary: Boolean(
-        process.env.CLOUDINARY_CLOUD_NAME &&
-          process.env.CLOUDINARY_API_KEY &&
-          process.env.CLOUDINARY_API_SECRET,
+      r2: Boolean(
+        process.env.R2_ACCOUNT_ID &&
+          process.env.R2_ACCESS_KEY_ID &&
+          process.env.R2_SECRET_ACCESS_KEY &&
+          process.env.R2_PRIVATE_BUCKET_NAME,
       ),
       redis: Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN),
     },
@@ -303,3 +385,4 @@ export type AdminUserListItem = Awaited<ReturnType<typeof getAdminUsers>>["users
 export type AdminUserDetail = NonNullable<Awaited<ReturnType<typeof getAdminUser>>>;
 export type AdminSubscriptionListItem = Awaited<ReturnType<typeof getAdminSubscriptions>>["subscriptions"][number];
 export type AdminPaymentListItem = Awaited<ReturnType<typeof getAdminPayments>>["payments"][number];
+export type AdminContactMessageListItem = Awaited<ReturnType<typeof getAdminContactMessages>>["messages"][number];

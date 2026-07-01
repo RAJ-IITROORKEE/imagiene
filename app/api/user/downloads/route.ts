@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { getAssetAccessDecision } from "@/lib/asset-access";
+import { withProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import { syncCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { paginationSchema } from "@/lib/validators";
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       data: downloads.map((download) => ({
         ...download,
         asset: {
-          ...download.asset,
+          ...withProtectedAssetPreviewUrl(download.asset),
           access: getAssetAccessDecision(user, download.asset),
         },
       })),

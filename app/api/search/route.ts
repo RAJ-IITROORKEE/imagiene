@@ -1,7 +1,8 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/lib/generated/prisma";
 import { NextRequest } from "next/server";
 
 import { getAssetAccessDecision } from "@/lib/asset-access";
+import { withProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import { getCurrentUser } from "@/lib/auth";
 import { handleApiError, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     return ok({
       data: {
         assets: assets.map((asset) => ({
-          ...asset,
+          ...withProtectedAssetPreviewUrl(asset),
           access: getAssetAccessDecision(user, asset),
         })),
         categories,

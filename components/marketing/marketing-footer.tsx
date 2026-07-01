@@ -16,7 +16,7 @@ export function MarketingFooter() {
           <Link href="/library" className="block hover:text-foreground">
             Asset library
           </Link>
-          <Link href="/pricing" className="block hover:text-foreground">
+          <Link href="/#pricing" className="block hover:text-foreground">
             Pricing
           </Link>
           <Link href="/about" className="block hover:text-foreground">

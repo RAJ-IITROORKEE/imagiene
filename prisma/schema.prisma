@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
 }
 
 datasource db {
@@ -47,6 +48,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ContactStatus {
+  NEW
+  READ
+  RESOLVED
+}
+
 model User {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   clerkId       String          @unique
@@ -78,7 +85,6 @@ model Asset {
   accessLevel        AssetAccessLevel @default(FREE)
   fileUrl            String
   previewUrl         String
-  cloudinaryPublicId String?
   format             String
   width              Int?
   height             Int?
@@ -207,4 +213,23 @@ model AdminAuditLog {
   @@index([entityType])
   @@index([entityId])
   @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    ContactStatus @default(NEW)
+  userId    String?       @db.ObjectId
+  readAt    DateTime?
+  resolvedAt DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
 }

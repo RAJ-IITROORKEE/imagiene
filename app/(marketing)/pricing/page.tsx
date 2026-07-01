@@ -29,7 +29,7 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <article
               key={plan.id}
-              className="flex rounded-3xl border bg-muted/30 p-6 shadow-sm md:min-h-[360px] md:flex-col"
+              className="flex rounded-[var(--radius-lg)] border bg-card p-6 shadow-sm md:min-h-[360px] md:flex-col"
             >
               <div>
                 <h2 className="text-2xl font-semibold">{plan.name}</h2>
@@ -48,7 +48,7 @@ export default function PricingPage() {
               </ul>
               <Link
                 href={getPlanCtaHref(plan.id)}
-                className="mt-6 block rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition hover:opacity-90 md:mt-auto"
+                className="mt-6 block rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 md:mt-auto"
               >
                 {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
               </Link>

@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import type { User } from "@prisma/client";
+import type { User } from "@/lib/generated/prisma";
 
 import { getDefaultRoleForEmail } from "@/lib/default-admin";
 import { prisma } from "@/lib/prisma";

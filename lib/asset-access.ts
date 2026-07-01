@@ -1,4 +1,4 @@
-import type { Asset, User } from "@prisma/client";
+import type { Asset, User } from "@/lib/generated/prisma";
 
 import { canAccessPlan, isAdmin } from "@/lib/permissions";
 

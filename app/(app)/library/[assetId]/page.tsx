@@ -8,6 +8,7 @@ import {
   assetTypeLabels,
 } from "@/constants/asset-types";
 import { getAssetAccessDecision, getAssetAccessMessage } from "@/lib/asset-access";
+import { getProtectedAssetPreviewUrl } from "@/lib/asset-preview";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -90,7 +91,7 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div
             className="min-h-[360px] rounded-3xl border bg-muted bg-cover bg-center shadow-sm"
-            style={{ backgroundImage: `url(${asset.previewUrl})` }}
+            style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(asset.id)})` }}
             aria-label={asset.title}
           />
           <div className="rounded-3xl border bg-background p-8 shadow-sm sm:p-10">
@@ -132,7 +133,6 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
                 canDownload={access.allowed}
                 initialBookmarked={Boolean(bookmark)}
                 accessMessage={accessMessage}
-                requiredPlan={access.requiredPlan}
               />
             </div>
           </div>
@@ -145,7 +145,7 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
                 <Link key={related.id} href={`/library/${related.id}`} className="rounded-2xl border bg-background p-4 transition hover:-translate-y-0.5 hover:shadow-sm">
                   <div
                     className="aspect-[4/3] rounded-xl bg-muted bg-cover bg-center"
-                    style={{ backgroundImage: `url(${related.previewUrl})` }}
+                    style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(related.id)})` }}
                     aria-label={related.title}
                   />
                   <p className="mt-3 font-semibold">{related.title}</p>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import type { Asset, Bookmark, Category, Download, Payment, Subscription, Tag, User } from "@prisma/client";
+import type { Asset, Bookmark, Category, Download, Payment, Subscription, Tag, User } from "@/lib/generated/prisma";
 
 import { planById } from "@/constants/plans";
 import { getAssetAccessDecision } from "@/lib/asset-access";

@@ -9,7 +9,7 @@ const envRows = [
   ["Clerk webhook", "CLERK_WEBHOOK_SECRET", "clerkWebhook"],
   ["Razorpay", "RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET", "razorpay"],
   ["Razorpay webhook", "RAZORPAY_WEBHOOK_SECRET", "razorpayWebhook"],
-  ["Cloudinary", "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET", "cloudinary"],
+  ["Cloudflare R2", "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PRIVATE_BUCKET_NAME", "r2"],
   ["Upstash Redis", "UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN", "redis"],
 ] as const;
 

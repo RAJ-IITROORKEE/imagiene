@@ -1,4 +1,4 @@
-import type { AssetAccessLevel, AssetType, Prisma } from "@prisma/client";
+import type { AssetAccessLevel, AssetType, Prisma } from "@/lib/generated/prisma";
 
 import { ASSET_ACCESS_LEVELS, ASSET_TYPES } from "@/constants/asset-types";
 import { getAssetAccessDecision } from "@/lib/asset-access";
