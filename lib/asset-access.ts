@@ -49,7 +49,7 @@ export function getAssetAccessDecision(
     };
   }
 
-  if (isAdmin(user) || canAccessPlan(userPlan, asset.accessLevel)) {
+  if (canAccessPlan(userPlan, asset.accessLevel)) {
     return {
       allowed: true,
       requiredPlan: asset.accessLevel,
@@ -75,7 +75,9 @@ export function getAssetAccessMessage(decision: AssetAccessDecision): string | n
   }
 
   if (decision.reason === "subscription") {
-    return `Upgrade to ${decision.requiredPlan.toLowerCase()} to access this asset.`;
+    const planLabel = decision.requiredPlan === "PREMIUM" ? "Premium" : decision.requiredPlan === "PRO" ? "Pro" : "Free";
+
+    return `Upgrade to ${planLabel} to access this asset.`;
   }
 
   if (decision.reason === "inactive") {

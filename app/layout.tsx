@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   },
   description:
     "A scientific illustration asset library platform for research scholars.",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    shortcut: ["/logo.png"],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

@@ -3,6 +3,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
+import { deleteAssetLikesForUser } from "@/lib/asset-likes";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { adminUpdateUserSchema, userIdParamsSchema } from "@/lib/validators";
@@ -107,6 +108,7 @@ export async function DELETE(_request: NextRequest, context: AdminUserRouteConte
 
     const clerk = await clerkClient();
     await clerk.users.deleteUser(user.clerkId);
+    await deleteAssetLikesForUser(user.id);
 
     await prisma.$transaction(async (tx) => {
       await tx.bookmark.deleteMany({ where: { userId: user.id } });

@@ -1,17 +1,45 @@
 "use client";
 
-import { Bookmark, Download, Lock } from "lucide-react";
+import {
+  Bookmark,
+  Check,
+  Copy,
+  Download,
+  Heart,
+  Lock,
+  MessageCircle,
+  Share2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
+import {
+  compressedDownloadSizes,
+  type CompressedDownloadSize,
+  type DownloadVariant,
+} from "@/lib/asset-download-options";
+
 type AssetActionsProps = {
   assetId: string;
+  title?: string;
+  accessLevel?: "FREE" | "PRO" | "PREMIUM";
   initialBookmarked: boolean;
+  initialLiked?: boolean;
+  initialLikeCount?: number;
   canDownload: boolean;
   accessMessage?: string | null;
+  originalFileSize?: string;
+  originalDimensions?: string;
+  originalFormat?: string;
+  compressedOptions?: Array<{
+    id: CompressedDownloadSize;
+    label: string;
+    dimensions: string;
+  }>;
 };
 
 type ApiResult<T> = {
@@ -19,15 +47,36 @@ type ApiResult<T> = {
   error?: { message?: string };
 };
 
+function shareText(title: string, url: string) {
+  return `${title} on Imagiene ${url}`;
+}
+
 export function AssetActions({
   assetId,
+  title = "Asset",
+  accessLevel = "FREE",
   initialBookmarked,
+  initialLiked = false,
+  initialLikeCount = 0,
   canDownload,
   accessMessage,
+  originalFileSize = "Not available",
+  originalDimensions = "Not available",
+  originalFormat = "Original",
+  compressedOptions = compressedDownloadSizes.map((option) => ({
+    id: option.id,
+    label: option.label,
+    dimensions: `${option.maxWidth}px wide`,
+  })),
 }: AssetActionsProps) {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [compressedSize, setCompressedSize] = useState<CompressedDownloadSize>("medium");
   const [isPending, startTransition] = useTransition();
 
   function requireSignIn() {
@@ -57,11 +106,47 @@ export function AssetActions({
       }
 
       setBookmarked(Boolean(result.data?.bookmarked));
-      toast.success(result.data?.bookmarked ? "Asset bookmarked" : "Bookmark removed");
+      toast.success(result.data?.bookmarked ? "Image saved" : "Image removed from saved items");
     });
   }
 
-  function downloadAsset() {
+  function toggleLike() {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      requireSignIn();
+      return;
+    }
+
+    startTransition(async () => {
+      const response = await fetch(`/api/assets/${assetId}/like`, {
+        method: liked ? "DELETE" : "POST",
+      });
+      const result = (await response.json()) as ApiResult<{ liked: boolean; likeCount: number }>;
+
+      if (!response.ok) {
+        toast.error(result.error?.message ?? "Could not update like");
+        return;
+      }
+
+      setLiked(Boolean(result.data?.liked));
+      setLikeCount(result.data?.likeCount ?? likeCount);
+      toast.success(result.data?.liked ? "Liked image" : "Like removed");
+    });
+  }
+
+  function openDownloadDialog() {
+    if (!canDownload) {
+      toast.error(accessMessage ?? "Upgrade required to download this asset");
+      return;
+    }
+
+    setDownloadOpen(true);
+  }
+
+  function downloadAsset(variant: DownloadVariant) {
     if (!isLoaded) {
       return;
     }
@@ -77,7 +162,11 @@ export function AssetActions({
     }
 
     startTransition(async () => {
-      const response = await fetch(`/api/assets/${assetId}/download`, { method: "POST" });
+      const response = await fetch(`/api/assets/${assetId}/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant, size: compressedSize }),
+      });
       const result = (await response.json()) as ApiResult<{ downloadUrl: string }>;
 
       if (!response.ok || !result.data?.downloadUrl) {
@@ -86,40 +175,253 @@ export function AssetActions({
       }
 
       window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
+      setDownloadOpen(false);
       toast.success("Download started");
     });
   }
 
+  async function copyShareLink() {
+    const url = window.location.href;
+
+    await navigator.clipboard.writeText(url);
+    toast.success("Share link copied");
+  }
+
+  async function nativeShare() {
+    const url = window.location.href;
+
+    if (!navigator.share) {
+      setShareOpen(true);
+      return;
+    }
+
+    await navigator.share({ title, text: title, url });
+  }
+
+  async function openInstagram() {
+    await copyShareLink();
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+  }
+
+  function openWhatsApp() {
+    const text = shareText(title, window.location.href);
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
+  const downloadLabel = accessLevel === "FREE" ? "Free download" : "Download";
+  const upgradeLabel = accessLevel === "PREMIUM" ? "Upgrade to Premium" : accessLevel === "PRO" ? "Upgrade to Pro" : "Download unavailable";
+  const selectedCompressedOption =
+    compressedOptions.find((option) => option.id === compressedSize) ?? compressedOptions[1];
+
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
-      <button
-        type="button"
-        onClick={toggleBookmark}
-        disabled={isPending}
-        className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
-      >
-        <Bookmark className="h-4 w-4" fill={bookmarked ? "currentColor" : "none"} />
-        {bookmarked ? "Bookmarked" : "Bookmark"}
-      </button>
-      {canDownload ? (
+    <>
+      <div className="grid gap-3 sm:grid-cols-3">
         <button
           type="button"
-          onClick={downloadAsset}
+          onClick={toggleBookmark}
           disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
         >
-          <Download className="h-4 w-4" />
-          Download
+          <Bookmark className="h-4 w-4" fill={bookmarked ? "currentColor" : "none"} />
+          {bookmarked ? "Saved" : "Save"}
         </button>
-      ) : (
-        <Link
-          href="/#pricing"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+
+        <button
+          type="button"
+          onClick={toggleLike}
+          disabled={isPending}
+          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
         >
-          <Lock className="h-4 w-4" />
-          Upgrade
-        </Link>
-      )}
-    </div>
+          <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
+          {liked ? "Liked" : "Like"}
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{likeCount}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShareOpen(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted"
+        >
+          <Share2 className="h-4 w-4" />
+          Share
+        </button>
+      </div>
+
+      <div className="mt-3">
+        {canDownload ? (
+          <button
+            type="button"
+            onClick={openDownloadDialog}
+            disabled={isPending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-[1rem] bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {downloadLabel}
+          </button>
+        ) : (
+          <Link
+            href="/#pricing"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-[1rem] bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+          >
+            <Lock className="h-4 w-4" />
+            {upgradeLabel}
+          </Link>
+        )}
+      </div>
+
+      {downloadOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose download quality"
+            className="w-full max-w-xl overflow-hidden rounded-[2rem] border bg-card shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-4 border-b p-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  Download image
+                </p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">Choose file quality</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDownloadOpen(false)}
+                className="rounded-full border p-2 transition hover:bg-muted"
+                aria-label="Close download dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid gap-4 p-5">
+              <button
+                type="button"
+                onClick={() => downloadAsset("original")}
+                disabled={isPending}
+                className="rounded-[1.25rem] border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-muted/30 disabled:opacity-60"
+              >
+                <span className="flex items-center justify-between gap-4">
+                  <span>
+                    <span className="block font-semibold">Original quality</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">
+                      {originalFormat} · {originalDimensions} · {originalFileSize}
+                    </span>
+                  </span>
+                  <Download className="h-5 w-5 text-primary" />
+                </span>
+              </button>
+
+              <div className="rounded-[1.25rem] border bg-muted/25 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold">Compressed WebP</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Smaller file for web, slides, notes, and quick sharing.
+                    </p>
+                  </div>
+                  <span className="rounded-full border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    {selectedCompressedOption?.dimensions}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {compressedDownloadSizes.map((option) => {
+                    const resolvedOption = compressedOptions.find((item) => item.id === option.id);
+                    const active = compressedSize === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setCompressedSize(option.id)}
+                        className="rounded-xl border bg-background p-3 text-left text-sm transition hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+                        aria-pressed={active}
+                      >
+                        <span className="flex items-center justify-between gap-2 font-semibold">
+                          {option.label}
+                          {active ? <Check className="h-4 w-4 text-primary" /> : null}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {resolvedOption?.dimensions ?? `${option.maxWidth}px wide`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => downloadAsset("compressed")}
+                  disabled={isPending}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4" />
+                  Download compressed WebP
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {shareOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share image"
+            className="w-full max-w-md overflow-hidden rounded-[2rem] border bg-card shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-4 border-b p-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Share</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">Send this image</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareOpen(false)}
+                className="rounded-full border p-2 transition hover:bg-muted"
+                aria-label="Close share dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid gap-3 p-5">
+              <button
+                type="button"
+                onClick={nativeShare}
+                className="inline-flex items-center gap-3 rounded-xl border p-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                <Share2 className="h-5 w-5 text-primary" />
+                Share with device
+              </button>
+              <button
+                type="button"
+                onClick={openWhatsApp}
+                className="inline-flex items-center gap-3 rounded-xl border p-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                <MessageCircle className="h-5 w-5 text-primary" />
+                Share on WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={openInstagram}
+                className="inline-flex items-center gap-3 rounded-xl border p-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                <Share2 className="h-5 w-5 text-primary" />
+                Copy link and open Instagram
+              </button>
+              <button
+                type="button"
+                onClick={copyShareLink}
+                className="inline-flex items-center gap-3 rounded-xl border p-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                <Copy className="h-5 w-5 text-primary" />
+                Copy share link
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -1,7 +1,12 @@
 import { NextRequest } from "next/server";
+import sharp from "sharp";
 
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { getAssetAccessDecision, getAssetAccessMessage } from "@/lib/asset-access";
+import {
+  getCompressedDownloadSize,
+  type DownloadVariant,
+} from "@/lib/asset-download-options";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getR2DownloadUrl, isExternalUrl } from "@/lib/r2";
@@ -16,30 +21,64 @@ type DownloadRouteContext = {
 
 const DOWNLOAD_RECEIPT_TTL_MS = 10 * 60 * 1000;
 
-function downloadHeaders(asset: { slug: string; format: string }, upstream: Response) {
+function parseDownloadRequest(input: unknown): {
+  variant: DownloadVariant;
+  size: ReturnType<typeof getCompressedDownloadSize>;
+} {
+  const value = input && typeof input === "object" ? input : {};
+  const variant = "variant" in value && value.variant === "compressed" ? "compressed" : "original";
+  const size = "size" in value && typeof value.size === "string" ? value.size : null;
+
+  return {
+    variant,
+    size: getCompressedDownloadSize(size),
+  };
+}
+
+function downloadHeaders({
+  asset,
+  upstream,
+  variant,
+  sizeLabel,
+  contentLength,
+}: {
+  asset: { slug: string; format: string };
+  upstream: Response;
+  variant: DownloadVariant;
+  sizeLabel?: string;
+  contentLength?: number;
+}) {
+  const extension = variant === "compressed" ? "webp" : asset.format.toLowerCase();
+  const suffix = variant === "compressed" && sizeLabel ? `-${sizeLabel.toLowerCase()}` : "";
   const headers = new Headers({
     "Cache-Control": "private, no-store, max-age=0",
-    "Content-Disposition": `attachment; filename="${asset.slug}.${asset.format.toLowerCase()}"`,
+    "Content-Disposition": `attachment; filename="${asset.slug}${suffix}.${extension}"`,
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     "X-Robots-Tag": "noindex, nofollow, noarchive",
   });
   const contentType = upstream.headers.get("content-type");
-  const contentLength = upstream.headers.get("content-length");
 
-  headers.set("Content-Type", contentType ?? "application/octet-stream");
+  headers.set("Content-Type", variant === "compressed" ? "image/webp" : contentType ?? "application/octet-stream");
 
   if (contentLength) {
-    headers.set("Content-Length", contentLength);
+    headers.set("Content-Length", String(contentLength));
+  } else {
+    const upstreamContentLength = upstream.headers.get("content-length");
+
+    if (variant === "original" && upstreamContentLength) {
+      headers.set("Content-Length", upstreamContentLength);
+    }
   }
 
   return headers;
 }
 
-export async function POST(_request: NextRequest, context: DownloadRouteContext) {
+export async function POST(request: NextRequest, context: DownloadRouteContext) {
   try {
     const params = assetIdParamsSchema.parse(await context.params);
     const user = await requireCurrentUser();
+    const input = parseDownloadRequest(await request.json().catch(() => ({})));
     const limited = await checkRateLimit(`download:${user.id}`, {
       prefix: "api:downloads",
       limit: 30,
@@ -84,7 +123,7 @@ export async function POST(_request: NextRequest, context: DownloadRouteContext)
     return ok({
       data: {
         downloadId: download.id,
-        downloadUrl: `/api/assets/${asset.id}/download?downloadId=${download.id}`,
+        downloadUrl: `/api/assets/${asset.id}/download?downloadId=${download.id}&variant=${input.variant}&size=${input.size.id}`,
       },
     });
   } catch (error) {
@@ -97,6 +136,8 @@ export async function GET(request: NextRequest, context: DownloadRouteContext) {
     const params = assetIdParamsSchema.parse(await context.params);
     const user = await requireCurrentUser();
     const downloadId = request.nextUrl.searchParams.get("downloadId") ?? "";
+    const variant = request.nextUrl.searchParams.get("variant") === "compressed" ? "compressed" : "original";
+    const size = getCompressedDownloadSize(request.nextUrl.searchParams.get("size"));
 
     if (!downloadId) {
       return apiError("Download receipt is required", 400);
@@ -131,8 +172,26 @@ export async function GET(request: NextRequest, context: DownloadRouteContext) {
       return apiError("Asset file not available", 404);
     }
 
+    if (variant === "compressed") {
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      const compressed = await sharp(buffer, { animated: true })
+        .resize({ width: size.maxWidth, withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
+        .toBuffer();
+
+      return new Response(new Uint8Array(compressed), {
+        headers: downloadHeaders({
+          asset: download.asset,
+          upstream,
+          variant,
+          sizeLabel: size.id,
+          contentLength: compressed.byteLength,
+        }),
+      });
+    }
+
     return new Response(upstream.body, {
-      headers: downloadHeaders(download.asset, upstream),
+      headers: downloadHeaders({ asset: download.asset, upstream, variant }),
     });
   } catch (error) {
     return handleApiError(error);
