@@ -2,11 +2,16 @@ import type { Prisma } from "@/lib/generated/prisma";
 import { NextRequest } from "next/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
-import { syncTagAssetLinks, validateAssetRelations } from "@/lib/admin-assets";
+import {
+  getAssetAvailability,
+  resolveUniqueAssetSlug,
+  syncTagAssetLinks,
+  validateAssetRelations,
+  validateAssetTitle,
+} from "@/lib/admin-assets";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createSlug } from "@/lib/slug";
 import { adminAssetQuerySchema, createAssetSchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
@@ -43,6 +48,14 @@ function toAssetOrderBy(sort: ReturnType<typeof adminAssetQuerySchema.parse>["so
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
+
+    if (request.nextUrl.searchParams.get("check") === "availability") {
+      const title = request.nextUrl.searchParams.get("title") ?? "";
+      const assetId = request.nextUrl.searchParams.get("assetId") ?? undefined;
+
+      return ok({ data: await getAssetAvailability({ title, assetId }) });
+    }
+
     const query = adminAssetQuerySchema.parse(
       Object.fromEntries(request.nextUrl.searchParams.entries()),
     );
@@ -91,6 +104,12 @@ export async function POST(request: NextRequest) {
     }
 
     const input = createAssetSchema.parse(await request.json());
+    const uniquenessError = await validateAssetTitle(input.title);
+
+    if (uniquenessError) {
+      return apiError(uniquenessError, 409);
+    }
+
     const relationError = await validateAssetRelations({
       categoryId: input.categoryId,
       tagIds: input.tagIds,
@@ -103,7 +122,7 @@ export async function POST(request: NextRequest) {
     const asset = await prisma.asset.create({
       data: {
         ...input,
-        slug: input.slug ?? createSlug(input.title),
+        slug: await resolveUniqueAssetSlug(input.title),
         deletedAt: null,
       },
       include: {

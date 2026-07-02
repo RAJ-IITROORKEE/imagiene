@@ -78,14 +78,14 @@ export function AssetActions({
 
     startTransition(async () => {
       const response = await fetch(`/api/assets/${assetId}/download`, { method: "POST" });
-      const result = (await response.json()) as ApiResult<{ fileUrl: string }>;
+      const result = (await response.json()) as ApiResult<{ downloadUrl: string }>;
 
-      if (!response.ok || !result.data?.fileUrl) {
+      if (!response.ok || !result.data?.downloadUrl) {
         toast.error(result.error?.message ?? "Download could not be started");
         return;
       }
 
-      window.open(result.data.fileUrl, "_blank", "noopener,noreferrer");
+      window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
       toast.success("Download started");
     });
   }

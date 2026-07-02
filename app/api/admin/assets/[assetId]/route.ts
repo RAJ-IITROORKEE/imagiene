@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
-import { syncTagAssetLinks, validateAssetRelations } from "@/lib/admin-assets";
+import { resolveUniqueAssetSlug, syncTagAssetLinks, validateAssetRelations, validateAssetTitle } from "@/lib/admin-assets";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -58,6 +58,14 @@ export async function PATCH(request: NextRequest, context: AdminAssetRouteContex
       return apiError("Asset not found", 404);
     }
 
+    if (input.title) {
+      const uniquenessError = await validateAssetTitle(input.title, params.assetId);
+
+      if (uniquenessError) {
+        return apiError(uniquenessError, 409);
+      }
+    }
+
     const relationError = await validateAssetRelations({
       categoryId: input.categoryId,
       tagIds: input.tagIds,
@@ -69,7 +77,10 @@ export async function PATCH(request: NextRequest, context: AdminAssetRouteContex
 
     const asset = await prisma.asset.update({
       where: { id: params.assetId },
-      data: input,
+      data: {
+        ...input,
+        slug: input.title ? await resolveUniqueAssetSlug(input.title, params.assetId) : input.slug,
+      },
       include: {
         category: true,
         tags: true,

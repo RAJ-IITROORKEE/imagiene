@@ -22,7 +22,7 @@ export const createAssetSchema = z.object({
         .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
         .optional(),
     ),
-  description: z.string().trim().min(10).max(5_000),
+  description: z.string().trim().max(5_000).default(""),
   type: z.enum(ASSET_TYPES),
   accessLevel: z.enum(ASSET_ACCESS_LEVELS).default("FREE"),
   fileUrl: z.string().trim().min(1).max(1_024),

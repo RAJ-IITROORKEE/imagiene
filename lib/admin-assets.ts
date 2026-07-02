@@ -1,4 +1,87 @@
 import { prisma } from "@/lib/prisma";
+import { createSlug } from "@/lib/slug";
+
+export async function getAssetAvailability({
+  title,
+  assetId,
+}: {
+  title: string;
+  assetId?: string;
+}) {
+  const cleanTitle = title.trim();
+  const slug = createSlug(cleanTitle);
+
+  if (!cleanTitle || !slug) {
+    return {
+      slug,
+      titleAvailable: false,
+      slugAvailable: false,
+    };
+  }
+
+  const [titleMatch, slugMatch] = await Promise.all([
+    prisma.asset.findFirst({
+      where: {
+        id: assetId ? { not: assetId } : undefined,
+        deletedAt: null,
+        title: { equals: cleanTitle, mode: "insensitive" },
+      },
+      select: { id: true },
+    }),
+    prisma.asset.findFirst({
+      where: {
+        id: assetId ? { not: assetId } : undefined,
+        slug,
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    slug: slugMatch ? await resolveUniqueAssetSlug(cleanTitle, assetId) : slug,
+    titleAvailable: !titleMatch,
+    slugAvailable: true,
+  };
+}
+
+export async function validateAssetTitle(title: string, assetId?: string): Promise<string | null> {
+  const cleanTitle = title.trim();
+  const titleMatch = await prisma.asset.findFirst({
+    where: {
+      id: assetId ? { not: assetId } : undefined,
+      deletedAt: null,
+      title: { equals: cleanTitle, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+
+  if (titleMatch) {
+    return "An asset with this name already exists";
+  }
+
+  return null;
+}
+
+export async function resolveUniqueAssetSlug(title: string, assetId?: string) {
+  const baseSlug = createSlug(title) || "asset";
+  let slug = baseSlug;
+  let suffix = 2;
+
+  while (
+    await prisma.asset.findFirst({
+      where: {
+        id: assetId ? { not: assetId } : undefined,
+        slug,
+      },
+      select: { id: true },
+    })
+  ) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
 
 export async function syncTagAssetLinks({
   assetId,

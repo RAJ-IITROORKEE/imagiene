@@ -21,7 +21,7 @@ export default async function EditAdminAssetPage({ params }: EditAdminAssetPageP
   return (
     <main className="px-6 py-8 sm:px-10 lg:px-12">
       <div className="mx-auto grid max-w-5xl gap-8">
-        <AdminPageHeader eyebrow="Edit asset" title={asset.title} description="Update metadata, access level, R2 object references, publish state, category, and tags." />
+        <AdminPageHeader eyebrow="Edit asset" title={asset.title} description="Replace the protected image when needed, then update name, access, category, tags, and publish state." />
         <AdminAssetForm asset={asset} categories={categories} tags={tags} />
       </div>
     </main>
