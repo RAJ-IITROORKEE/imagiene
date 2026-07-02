@@ -8,7 +8,6 @@ import {
   getAdminApiErrorMessage,
   parseAdminApiResponse,
 } from "@/components/admin/admin-form-response";
-import { PLAN_TYPES } from "@/constants/plans";
 import type { AdminUserDetail } from "@/lib/admin-data";
 
 type AdminUserFormProps = {
@@ -24,8 +23,6 @@ export function AdminUserForm({ user }: AdminUserFormProps) {
     setError(null);
     const payload = {
       role: String(formData.get("role") ?? user.role),
-      plan: String(formData.get("plan") ?? user.plan),
-      isActive: formData.get("isActive") === "on",
     };
 
     startTransition(async () => {
@@ -50,10 +47,10 @@ export function AdminUserForm({ user }: AdminUserFormProps) {
 
   return (
     <form action={onSubmit} className="rounded-3xl border bg-background p-6 shadow-sm">
-      <h2 className="text-xl font-semibold">Account controls</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Email and identity remain managed by Clerk. Admin changes here control app role, plan, and active state.</p>
+      <h2 className="text-xl font-semibold">Role access</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Email and identity remain managed by Clerk. Change only the app role here.</p>
       {error ? <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-5 grid gap-4">
         <label className="grid gap-2 text-sm font-medium">
           Role
           <select name="role" defaultValue={user.role} className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground">
@@ -61,19 +58,12 @@ export function AdminUserForm({ user }: AdminUserFormProps) {
             <option value="ADMIN">ADMIN</option>
           </select>
         </label>
-        <label className="grid gap-2 text-sm font-medium">
-          Plan
-          <select name="plan" defaultValue={user.plan} className="rounded-2xl border bg-background px-4 py-3 font-normal outline-none focus:border-foreground">
-            {PLAN_TYPES.map((plan) => <option key={plan} value={plan}>{plan}</option>)}
-          </select>
-        </label>
       </div>
-      <label className="mt-5 flex items-center gap-3 text-sm font-medium">
-        <input name="isActive" type="checkbox" defaultChecked={user.isActive} className="size-4" />
-        Active user
-      </label>
+      <div className="mt-5 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+        Current plan: <span className="font-semibold text-foreground">{user.plan}</span> · Status: <span className="font-semibold text-foreground">{user.isActive ? "Active" : "Inactive"}</span>
+      </div>
       <button disabled={isPending} className="mt-6 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60">
-        {isPending ? "Saving..." : "Save user"}
+        {isPending ? "Saving..." : "Save role"}
       </button>
     </form>
   );

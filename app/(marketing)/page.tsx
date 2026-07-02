@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Atom, Check, Dna, FlaskConical, Microscope, Network, Sparkles } from "lucide-react";
 
-import { plans } from "@/constants/plans";
 import { getProtectedAssetPreviewUrl } from "@/lib/asset-preview";
+import { getRuntimePlans } from "@/lib/plan-settings";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ function getPlanCtaHref(planId: string) {
 }
 
 export default async function MarketingHomePage() {
-  const [categories, featuredAssets] = await Promise.all([
+  const [categories, featuredAssets, plans] = await Promise.all([
     prisma.category.findMany({
       orderBy: { name: "asc" },
       take: 6,
@@ -36,6 +36,7 @@ export default async function MarketingHomePage() {
       take: 8,
       include: { category: { select: { name: true, slug: true } } },
     }),
+    getRuntimePlans(),
   ]);
 
   return (
@@ -160,9 +161,15 @@ export default async function MarketingHomePage() {
                     </li>
                   ))}
                 </ul>
-                <Link href={getPlanCtaHref(plan.id)} className="mt-auto rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
-                  {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
-                </Link>
+                {plan.active ? (
+                  <Link href={getPlanCtaHref(plan.id)} className="mt-auto rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+                    {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
+                  </Link>
+                ) : (
+                  <p className="mt-auto rounded-[var(--radius-md)] border bg-muted px-5 py-3 text-center text-sm font-semibold text-muted-foreground">
+                    {plan.inactiveMessage}
+                  </p>
+                )}
               </article>
             ))}
           </div>

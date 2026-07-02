@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 
-import { planById } from "@/constants/plans";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { syncCurrentUser } from "@/lib/auth";
 import { PaymentProcessingError } from "@/lib/payments";
+import { getRuntimePlanById } from "@/lib/plan-settings";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRazorpayKeyId, requireRazorpay } from "@/lib/razorpay";
@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
     }
 
     const input = createRazorpayOrderSchema.parse(await request.json());
-    const plan = planById[input.plan];
+    const plan = await getRuntimePlanById(input.plan);
+
+    if (!plan.active) {
+      return apiError(plan.inactiveMessage, 409);
+    }
+
     const razorpay = requireRazorpay();
     const keyId = getRazorpayKeyId();
 

@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 
 import type { Payment } from "@/lib/generated/prisma";
 
-import { planById } from "@/constants/plans";
 import { prisma } from "@/lib/prisma";
 import { requireRazorpay } from "@/lib/razorpay";
 
@@ -89,8 +88,8 @@ export async function fetchCapturedRazorpayPayment(input: {
   return razorpayPayment;
 }
 
-export function getPlanAmount(payment: Pick<Payment, "plan">): number {
-  return planById[payment.plan].priceMonthlyPaise;
+export function getPlanAmount(payment: Pick<Payment, "amount">): number {
+  return payment.amount;
 }
 
 export function getSubscriptionExpiry(startedAt: Date): Date {

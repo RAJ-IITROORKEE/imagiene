@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import type { Asset, Bookmark, Category, Download, Payment, Subscription, Tag, User } from "@/lib/generated/prisma";
 
-import { planById } from "@/constants/plans";
 import { getAssetAccessDecision } from "@/lib/asset-access";
 import { syncCurrentUser } from "@/lib/auth";
+import { getRuntimePlanById } from "@/lib/plan-settings";
 import { prisma } from "@/lib/prisma";
 
 export type DashboardSearchParams = Record<string, string | string[] | undefined>;
@@ -84,9 +84,11 @@ export async function getDashboardOverviewData() {
 
   const bookmarkedIds = new Set(recentBookmarks.map((bookmark) => bookmark.assetId));
 
+  const plan = await getRuntimePlanById(user.plan);
+
   return {
     user,
-    plan: planById[user.plan],
+    plan,
     stats: {
       bookmarks: bookmarkCount,
       downloads: downloadCount,
@@ -190,9 +192,11 @@ export async function getDashboardBillingData() {
     }),
   ]);
 
+  const plan = await getRuntimePlanById(user.plan);
+
   return {
     user,
-    plan: planById[user.plan],
+    plan,
     activeSubscription,
     subscriptions,
     payments,

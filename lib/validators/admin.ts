@@ -30,6 +30,18 @@ export const paymentQuerySchema = paginationSchema.extend({
   status: z.preprocess(emptyStringToUndefined, z.enum(PAYMENT_STATUSES).optional()),
 });
 
+export const adminPlanSettingSchema = z.object({
+  plan: z.enum(PLAN_TYPES),
+  priceMonthlyInr: z.coerce.number().int().min(0).max(1_000_000),
+  active: z.coerce.boolean(),
+  inactiveMessage: z.preprocess(emptyStringToUndefined, z.string().trim().max(240).optional()),
+});
+
+export const adminPlanSettingsSchema = z.object({
+  plans: z.array(adminPlanSettingSchema).length(PLAN_TYPES.length),
+});
+
 export type AdminAssetQueryInput = z.infer<typeof adminAssetQuerySchema>;
 export type SubscriptionQueryInput = z.infer<typeof subscriptionQuerySchema>;
 export type PaymentQueryInput = z.infer<typeof paymentQuerySchema>;
+export type AdminPlanSettingsInput = z.infer<typeof adminPlanSettingsSchema>;

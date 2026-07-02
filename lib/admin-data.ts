@@ -2,11 +2,16 @@ import type { Prisma } from "@/lib/generated/prisma";
 
 import { requireAdmin } from "@/lib/admin";
 import { countContactMessages, getRecentContactMessages, listContactMessages } from "@/lib/contact-messages";
+import { getRuntimePlans } from "@/lib/plan-settings";
 import { prisma } from "@/lib/prisma";
 
 export type AdminSearchParams = Record<string, string | string[] | undefined>;
 
 const DEFAULT_PAGE_SIZE = 20;
+const USER_SORT_FIELDS = ["name", "email", "role", "plan", "createdAt", "updatedAt"] as const;
+
+type UserSortField = (typeof USER_SORT_FIELDS)[number];
+type SortDirection = "asc" | "desc";
 
 function firstParam(params: AdminSearchParams, key: string): string | undefined {
   const value = params[key];
@@ -21,6 +26,22 @@ function firstParam(params: AdminSearchParams, key: string): string | undefined 
 function pageParam(params: AdminSearchParams): number {
   const value = Number(firstParam(params, "page") ?? "1");
   return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
+function pageSizeParam(params: AdminSearchParams): number {
+  const value = Number(firstParam(params, "pageSize") ?? String(DEFAULT_PAGE_SIZE));
+
+  return Number.isInteger(value) && value >= 5 && value <= 100 ? value : DEFAULT_PAGE_SIZE;
+}
+
+function sortDirectionParam(params: AdminSearchParams): SortDirection {
+  return firstParam(params, "dir") === "asc" ? "asc" : "desc";
+}
+
+function userSortParam(params: AdminSearchParams): UserSortField {
+  const value = firstParam(params, "sort");
+
+  return USER_SORT_FIELDS.includes(value as UserSortField) ? (value as UserSortField) : "createdAt";
 }
 
 function cleanParam(params: AdminSearchParams, key: string): string | undefined {
@@ -250,7 +271,10 @@ export async function getAdminUsers(params: AdminSearchParams) {
   await requireAdmin();
 
   const page = pageParam(params);
+  const pageSize = pageSizeParam(params);
   const q = cleanParam(params, "q");
+  const sort = userSortParam(params);
+  const dir = sortDirectionParam(params);
   const where: Prisma.UserWhereInput = {
     OR: q
       ? [
@@ -259,19 +283,26 @@ export async function getAdminUsers(params: AdminSearchParams) {
         ]
       : undefined,
   };
-  const skip = (page - 1) * DEFAULT_PAGE_SIZE;
+  const skip = (page - 1) * pageSize;
   const [total, users] = await Promise.all([
     prisma.user.count({ where }),
     prisma.user.findMany({
       where,
       skip,
-      take: DEFAULT_PAGE_SIZE,
-      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      orderBy: { [sort]: dir },
       include: { _count: { select: { bookmarks: true, downloads: true, payments: true } } },
     }),
   ]);
 
-  return { users, total, page, pageCount: Math.ceil(total / DEFAULT_PAGE_SIZE), query: { q } };
+  return {
+    users,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.ceil(total / pageSize),
+    query: { q, sort, dir },
+  };
 }
 
 export async function getAdminUser(userId: string) {
@@ -357,14 +388,20 @@ export async function getAdminPayments(params: AdminSearchParams) {
 
 export async function getAdminSettingsData() {
   const admin = await requireAdmin();
+  const plans = await getRuntimePlans();
 
   return {
     admin,
+    plans,
     env: {
       database: Boolean(process.env.DATABASE_URL),
       clerk: Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY),
       clerkWebhook: Boolean(process.env.CLERK_WEBHOOK_SECRET),
-      razorpay: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+      razorpay: Boolean(
+        (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID) &&
+          process.env.RAZORPAY_KEY_ID &&
+          process.env.RAZORPAY_KEY_SECRET,
+      ),
       razorpayWebhook: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET),
       r2: Boolean(
         process.env.R2_ACCOUNT_ID &&

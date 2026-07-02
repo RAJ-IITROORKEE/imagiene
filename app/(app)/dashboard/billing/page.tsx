@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { PlanCard } from "@/components/dashboard/plan-card";
-import { paidPlans } from "@/constants/plans";
 import { getDashboardBillingData } from "@/lib/dashboard-data";
+import { getRuntimePaidPlans } from "@/lib/plan-settings";
 import { formatInr } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -23,6 +23,7 @@ function formatDate(date: Date | null) {
 
 export default async function BillingPage() {
   const data = await getDashboardBillingData();
+  const paidPlans = await getRuntimePaidPlans();
 
   return (
     <main className="px-6 py-10 sm:px-10 lg:px-16">
@@ -44,12 +45,16 @@ export default async function BillingPage() {
               <h2 className="mt-3 text-2xl font-semibold">{plan.name}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{plan.description}</p>
               <p className="mt-4 text-xl font-semibold">{plan.displayPrice}</p>
-              <Link
-                href={`/checkout?plan=${plan.id}`}
-                className="mt-5 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-background"
-              >
-                Choose {plan.name}
-              </Link>
+              {plan.active ? (
+                <Link
+                  href={`/checkout?plan=${plan.id}`}
+                  className="mt-5 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-background"
+                >
+                  Choose {plan.name}
+                </Link>
+              ) : (
+                <p className="mt-5 rounded-2xl border bg-muted px-4 py-3 text-sm font-semibold text-muted-foreground">{plan.inactiveMessage}</p>
+              )}
             </div>
           ))}
         </section>

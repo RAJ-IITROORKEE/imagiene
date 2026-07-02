@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { CheckoutCard } from "@/components/checkout/checkout-card";
-import { paidPlans, planById, type PlanType } from "@/constants/plans";
+import type { PlanType } from "@/constants/plans";
 import { requireDashboardUser } from "@/lib/dashboard-data";
+import { getRuntimePaidPlans, getRuntimePlanById } from "@/lib/plan-settings";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -37,6 +38,8 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
   }
 
   if (!planId) {
+    const paidPlans = await getRuntimePaidPlans();
+
     return (
       <main className="px-6 py-10 sm:px-10 lg:px-16">
         <div className="mx-auto max-w-5xl space-y-8">
@@ -59,7 +62,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     );
   }
 
-  const plan = planById[planId];
+  const plan = await getRuntimePlanById(planId);
 
   return (
     <main className="px-6 py-10 sm:px-10 lg:px-16">

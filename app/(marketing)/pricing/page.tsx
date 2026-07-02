@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { plans } from "@/constants/plans";
+import { getRuntimePlans } from "@/lib/plan-settings";
 
 function getPlanCtaHref(planId: string) {
   if (planId === "FREE") {
@@ -10,7 +10,9 @@ function getPlanCtaHref(planId: string) {
   return `/sign-in?redirect_url=${encodeURIComponent(`/checkout?plan=${planId}`)}`;
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const plans = await getRuntimePlans();
+
   return (
     <main className="px-6 py-16 sm:px-10 lg:px-16">
       <section className="mx-auto max-w-6xl space-y-10">
@@ -46,12 +48,18 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href={getPlanCtaHref(plan.id)}
-                className="mt-6 block rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 md:mt-auto"
-              >
-                {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
-              </Link>
+              {plan.active ? (
+                <Link
+                  href={getPlanCtaHref(plan.id)}
+                  className="mt-6 block rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 md:mt-auto"
+                >
+                  {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
+                </Link>
+              ) : (
+                <p className="mt-6 rounded-[var(--radius-md)] border bg-muted px-5 py-3 text-center text-sm font-semibold text-muted-foreground md:mt-auto">
+                  {plan.inactiveMessage}
+                </p>
+              )}
             </article>
           ))}
         </div>

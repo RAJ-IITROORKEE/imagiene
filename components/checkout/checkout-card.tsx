@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import type { Plan, PlanType } from "@/constants/plans";
+import type { PlanType } from "@/constants/plans";
+import type { RuntimePlan } from "@/lib/plan-settings";
 
 type CheckoutCardProps = {
-  plan: Plan;
+  plan: RuntimePlan;
   user: {
     name: string | null;
     email: string;
@@ -108,6 +109,11 @@ export function CheckoutCard({ plan, user }: CheckoutCardProps) {
   const [error, setError] = useState<string | null>(null);
 
   function startCheckout() {
+    if (!plan.active) {
+      setError(plan.inactiveMessage);
+      return;
+    }
+
     setError(null);
 
     startTransition(async () => {
@@ -200,10 +206,10 @@ export function CheckoutCard({ plan, user }: CheckoutCardProps) {
       <button
         type="button"
         onClick={startCheckout}
-        disabled={isPending}
+        disabled={isPending || !plan.active}
         className="mt-8 w-full rounded-full bg-primary px-6 py-4 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {isPending ? "Preparing checkout..." : `Pay ${plan.displayPrice}`}
+        {plan.active ? (isPending ? "Preparing checkout..." : `Pay ${plan.displayPrice}`) : plan.inactiveMessage}
       </button>
     </section>
   );
