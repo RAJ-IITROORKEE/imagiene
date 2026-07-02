@@ -69,20 +69,72 @@ function BarList({ items }: { items: { label: string; value: number }[] }) {
 
 function TrendBars({ items }: { items: { label: string; value: number; isCurrent: boolean }[] }) {
   const max = Math.max(1, ...items.map((item) => item.value));
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  const average = Math.round(total / Math.max(items.length, 1));
+  const current = items[items.length - 1]?.value ?? 0;
+  const previous = items[items.length - 2]?.value ?? 0;
+  const change = current - previous;
+  const peak = items.reduce((highest, item) => (item.value > highest.value ? item : highest), items[0] ?? { label: "-", value: 0, isCurrent: false });
+  const changeLabel = previous ? `${change >= 0 ? "+" : ""}${Math.round((change / previous) * 100)}% vs previous month` : current ? "New activity this month" : "No change yet";
 
   return (
-    <div className="flex h-52 items-end gap-3 rounded-[var(--radius-lg)] border bg-background p-4">
-      {items.map((item) => (
-        <div key={item.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-          <div className="flex h-36 w-full items-end rounded-full bg-muted/60 px-1">
-            <div
-              className={`w-full rounded-full ${item.isCurrent ? "bg-primary" : "bg-primary/45"}`}
-              style={{ height: `${Math.max((item.value / max) * 100, 6)}%` }}
-            />
-          </div>
-          <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Total</p>
+          <p className="mt-2 text-2xl font-semibold">{total}</p>
         </div>
-      ))}
+        <div className="rounded-2xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Current</p>
+          <p className="mt-2 text-2xl font-semibold">{current}</p>
+        </div>
+        <div className="rounded-2xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Average</p>
+          <p className="mt-2 text-2xl font-semibold">{average}</p>
+        </div>
+        <div className="rounded-2xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Peak</p>
+          <p className="mt-2 text-2xl font-semibold">{peak.value}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{peak.label}</p>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-lg)] border bg-background p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Monthly downloads</p>
+            <p className="mt-1 text-xs text-muted-foreground">Each bar shows completed downloads in that calendar month.</p>
+          </div>
+          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${change >= 0 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-rose-500/10 text-rose-700 dark:text-rose-300"}`}>
+            <ArrowUpRight className={`h-3.5 w-3.5 ${change < 0 ? "rotate-90" : ""}`} />
+            {changeLabel}
+          </span>
+        </div>
+
+        <div className="relative mt-6 h-72 overflow-hidden rounded-3xl bg-muted/25 p-4">
+          <div className="absolute inset-x-4 top-6 border-t border-dashed" />
+          <div className="absolute inset-x-4 top-1/2 border-t border-dashed" />
+          <div className="absolute inset-x-4 bottom-14 border-t border-dashed" />
+          <div className="relative flex h-full items-end gap-3 sm:gap-4" aria-label="Six month download trend">
+            {items.map((item) => {
+              const height = item.value ? Math.max((item.value / max) * 100, 8) : 2;
+
+              return (
+                <div key={item.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2" title={`${item.label}: ${item.value} downloads`}>
+                  <span className={`text-xs font-semibold ${item.isCurrent ? "text-foreground" : "text-muted-foreground"}`}>{item.value}</span>
+                  <div className="flex h-44 w-full items-end rounded-2xl border bg-background/80 p-1.5 shadow-inner">
+                    <div
+                      className={`w-full rounded-xl transition-all ${item.isCurrent ? "bg-primary shadow-lg shadow-primary/20" : "bg-primary/45"}`}
+                      style={{ height: `${height}%` }}
+                    />
+                  </div>
+                  <span className={`text-xs font-semibold ${item.isCurrent ? "text-foreground" : "text-muted-foreground"}`}>{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
