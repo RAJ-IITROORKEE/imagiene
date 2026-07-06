@@ -5,6 +5,7 @@ import { resolveUniqueAssetSlug, syncTagAssetLinks, validateAssetRelations, vali
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { deleteR2Object } from "@/lib/r2";
 import { assetIdParamsSchema, updateAssetSchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
@@ -123,6 +124,17 @@ export async function DELETE(_request: NextRequest, context: AdminAssetRouteCont
     }
 
     const params = assetIdParamsSchema.parse(await context.params);
+    const existing = await prisma.asset.findUnique({ where: { id: params.assetId } });
+
+    if (!existing) {
+      return apiError("Asset not found", 404);
+    }
+
+    await Promise.all([
+      deleteR2Object({ key: existing.fileUrl, purpose: "asset" }),
+      deleteR2Object({ key: existing.previewUrl, purpose: "preview" }),
+    ]);
+
     const asset = await prisma.asset.update({
       where: { id: params.assetId },
       data: {
@@ -136,7 +148,7 @@ export async function DELETE(_request: NextRequest, context: AdminAssetRouteCont
       action: "asset.soft_delete",
       entityType: "Asset",
       entityId: asset.id,
-      metadata: { title: asset.title },
+      metadata: { title: asset.title, r2ObjectsDeleted: true },
     });
 
     return ok({ data: asset });

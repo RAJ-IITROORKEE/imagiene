@@ -19,12 +19,6 @@ export const metadata: Metadata = {
   description: "Learn how Imagiene delivers fast, protected, publication-ready scientific images.",
 };
 
-const heroStats = [
-  { value: "Fast", label: "preview rendering for image-heavy libraries" },
-  { value: "Private", label: "premium files protected behind system routes" },
-  { value: "2 modes", label: "compressed previews and original downloads" },
-] as const;
-
 const spotlightFeatures = [
   {
     title: "Faster image rendering",
@@ -69,8 +63,6 @@ const productFeatures = [
   },
 ] as const;
 
-const pipelineSteps = ["Compressed preview", "Access check", "Protected original", "System download"] as const;
-
 const qualitySignals = [
   "Curated categories and tags for research workflows",
   "Admin publishing controls before assets go live",
@@ -81,88 +73,6 @@ const qualitySignals = [
 export default function AboutPage() {
   return (
     <main className="overflow-hidden">
-      <section className="relative px-4 py-20 sm:px-8 sm:py-24 lg:px-12">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.14),transparent_34%),radial-gradient(circle_at_bottom_right,hsl(var(--muted)),transparent_32%)]" />
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-stretch">
-          <div className="rounded-[2rem] border bg-card/90 p-7 shadow-sm backdrop-blur sm:p-10 lg:p-12">
-            <p className="inline-flex rounded-full border bg-muted/60 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
-              About Imagiene
-            </p>
-            <h1 className="mt-7 max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl">
-              Scientific images that load fast, stay protected, and remain publication-ready.
-            </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
-              Imagiene is built for researchers, educators, and creative teams who need trusted visual
-              assets without exposing premium originals through inspectable links or slow browsing flows.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/library"
-                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Browse protected library
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/#pricing"
-                className="inline-flex items-center justify-center rounded-[var(--radius-md)] border bg-background px-6 py-3 text-sm font-semibold transition-colors hover:bg-muted"
-              >
-                Compare access levels
-              </Link>
-            </div>
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              {heroStats.map((stat) => (
-                <div key={stat.label} className="rounded-[1.25rem] border bg-muted/35 p-4">
-                  <p className="text-2xl font-semibold tracking-tight">{stat.value}</p>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border bg-background/85 p-4 shadow-sm backdrop-blur sm:p-6">
-            <div className="overflow-hidden rounded-[1.5rem] border bg-card">
-              <div className="flex items-center justify-between border-b bg-muted/35 px-5 py-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                    Product flow
-                  </p>
-                  <h2 className="mt-1 font-semibold">Protected image pipeline</h2>
-                </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/20 dark:text-cyan-100">
-                  No public originals
-                </span>
-              </div>
-              <div className="grid gap-4 p-5">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[1.25rem] border bg-muted">
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24),transparent_45%),radial-gradient(circle_at_70%_35%,hsl(var(--foreground)/0.18),transparent_18%)]" />
-                  <div className="absolute left-5 top-5 rounded-full border bg-background/85 px-3 py-1 text-xs font-semibold backdrop-blur">
-                    Compressed preview
-                  </div>
-                  <div className="absolute bottom-5 left-5 right-5 rounded-[1rem] border bg-background/88 p-4 shadow-sm backdrop-blur">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold">Microscopy vector pack</p>
-                        <p className="mt-1 text-xs text-muted-foreground">PNG, SVG, original source</p>
-                      </div>
-                      <LockKeyhole className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {pipelineSteps.map((step, index) => (
-                    <div key={step} className="rounded-[1rem] border bg-muted/30 p-4">
-                      <p className="text-xs font-semibold text-muted-foreground">0{index + 1}</p>
-                      <p className="mt-1 text-sm font-semibold">{step}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="px-4 py-16 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">

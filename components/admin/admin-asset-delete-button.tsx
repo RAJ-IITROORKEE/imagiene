@@ -55,7 +55,7 @@ export function AdminAssetDeleteButton({ assetId, title, disabled }: AdminAssetD
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-destructive">Warning</p>
             <h2 id={`delete-asset-${assetId}`} className="mt-3 text-2xl font-semibold tracking-tight">Delete this asset?</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              This will remove <span className="font-semibold text-foreground">{title}</span> from the public library by unpublishing it and marking it as deleted. Existing private R2 files stay protected.
+              This will remove <span className="font-semibold text-foreground">{title}</span> from the public library, mark it as deleted, and permanently delete its original and preview files from the private R2 bucket.
             </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button

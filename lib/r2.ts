@@ -184,6 +184,32 @@ export function getR2UploadUrl({
   });
 }
 
+export async function deleteR2Object({
+  key,
+  purpose,
+}: {
+  key: string;
+  purpose: R2UploadPurpose;
+}) {
+  if (!key || isExternalUrl(key)) {
+    return;
+  }
+
+  const deleteUrl = getR2SignedUrl({
+    bucket: getR2Bucket(purpose),
+    key,
+    method: "DELETE",
+  });
+  const response = await fetch(deleteUrl, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not delete ${purpose} object from R2`);
+  }
+}
+
 export function getR2DownloadUrl(key: string) {
   return getR2SignedUrl({
     bucket: getR2Bucket("asset"),
