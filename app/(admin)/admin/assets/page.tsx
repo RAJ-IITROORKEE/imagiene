@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, Download, Eye, Heart, ImageIcon, Pencil, Plus, Search, Share2 } from "lucide-react";
 
+import { AdminAssetDeleteButton } from "@/components/admin/admin-asset-delete-button";
 import { Pagination } from "@/components/library/pagination";
 import { assetAccessLevelLabels } from "@/constants/asset-types";
 import type { AdminSearchParams } from "@/lib/admin-data";
@@ -125,7 +126,7 @@ export default async function AdminAssetsPage({ searchParams }: AdminAssetsPageP
           <div className="border-b px-5 py-5">
             <h2 className="font-semibold">Asset Management</h2>
           </div>
-          <div className="hidden grid-cols-[72px_1.2fr_0.85fr_0.62fr_0.72fr_0.95fr_0.78fr_96px] gap-5 border-b bg-muted/45 px-5 py-3 text-xs font-semibold text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[72px_1.15fr_0.82fr_0.58fr_0.68fr_0.9fr_0.72fr_136px] gap-5 border-b bg-muted/45 px-5 py-3 text-xs font-semibold text-muted-foreground md:grid">
             <span>Thumbnail</span>
             <span>Asset Name</span>
             <span>Category</span>
@@ -137,7 +138,7 @@ export default async function AdminAssetsPage({ searchParams }: AdminAssetsPageP
           </div>
           <div className="divide-y">
             {data.assets.length ? data.assets.map((asset) => (
-              <article key={asset.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-muted/35 md:grid-cols-[72px_1.2fr_0.85fr_0.62fr_0.72fr_0.95fr_0.78fr_96px] md:items-center md:gap-5">
+              <article key={asset.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-muted/35 md:grid-cols-[72px_1.15fr_0.82fr_0.58fr_0.68fr_0.9fr_0.72fr_136px] md:items-center md:gap-5">
                 <div
                   className="h-14 w-14 rounded-[var(--radius-md)] border bg-muted bg-cover bg-center"
                   style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(asset.id)})` }}
@@ -173,6 +174,7 @@ export default async function AdminAssetsPage({ searchParams }: AdminAssetsPageP
                       <Eye className="h-4 w-4" />
                     </Link>
                   ) : null}
+                  <AdminAssetDeleteButton assetId={asset.id} title={asset.title} disabled={Boolean(asset.deletedAt)} />
                 </div>
               </article>
             )) : <p className="p-6 text-sm text-muted-foreground">No assets found.</p>}

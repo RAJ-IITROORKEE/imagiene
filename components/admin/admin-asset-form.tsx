@@ -28,7 +28,9 @@ type AdminAssetFormProps = {
 type R2UploadResponse = {
   data?: {
     key: string;
+    uploadUrl: string;
     publicUrl: string | null;
+    headers: Record<string, string>;
   };
   error?: { message?: string };
 };
@@ -119,23 +121,32 @@ function readImageDimensions(file: File) {
 }
 
 async function uploadR2File(file: File, purpose: "asset" | "preview") {
-  const formData = new FormData();
-  formData.set("purpose", purpose);
-  formData.set("fileName", file.name);
-  formData.set("contentType", file.type || "application/octet-stream");
-  formData.set("file", file);
-
-  const uploadResponse = await fetch("/api/admin/r2/upload", {
+  const signResponse = await fetch("/api/admin/r2/upload-url", {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      purpose,
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+    }),
   });
-  const uploaded = (await uploadResponse.json().catch(() => ({}))) as R2UploadResponse;
+  const signed = (await signResponse.json().catch(() => ({}))) as R2UploadResponse;
 
-  if (!uploadResponse.ok || !uploaded.data) {
-    throw new Error(uploaded.error?.message ?? "Protected upload failed. Check R2 credentials and bucket permissions.");
+  if (!signResponse.ok || !signed.data) {
+    throw new Error(signed.error?.message ?? "Could not prepare protected upload.");
   }
 
-  return uploaded.data;
+  const uploadResponse = await fetch(signed.data.uploadUrl, {
+    method: "PUT",
+    headers: signed.data.headers,
+    body: file,
+  }).catch(() => null);
+
+  if (!uploadResponse?.ok) {
+    throw new Error("Protected upload failed. Add R2 bucket CORS for this Vercel domain and allow PUT with Content-Type.");
+  }
+
+  return signed.data;
 }
 
 export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps) {
