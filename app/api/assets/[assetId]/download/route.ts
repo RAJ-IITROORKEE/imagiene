@@ -4,7 +4,9 @@ import sharp from "sharp";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { getAssetAccessDecision, getAssetAccessMessage } from "@/lib/asset-access";
 import {
+  getCompressedDownloadFormat,
   getCompressedDownloadSize,
+  type CompressedDownloadFormat,
   type DownloadVariant,
 } from "@/lib/asset-download-options";
 import { requireCurrentUser } from "@/lib/auth";
@@ -23,14 +25,17 @@ const DOWNLOAD_RECEIPT_TTL_MS = 10 * 60 * 1000;
 
 function parseDownloadRequest(input: unknown): {
   variant: DownloadVariant;
+  format: ReturnType<typeof getCompressedDownloadFormat>;
   size: ReturnType<typeof getCompressedDownloadSize>;
 } {
   const value = input && typeof input === "object" ? input : {};
   const variant = "variant" in value && value.variant === "compressed" ? "compressed" : "original";
+  const format = "format" in value && typeof value.format === "string" ? value.format : null;
   const size = "size" in value && typeof value.size === "string" ? value.size : null;
 
   return {
     variant,
+    format: getCompressedDownloadFormat(format),
     size: getCompressedDownloadSize(size),
   };
 }
@@ -39,16 +44,18 @@ function downloadHeaders({
   asset,
   upstream,
   variant,
+  format,
   sizeLabel,
   contentLength,
 }: {
   asset: { slug: string; format: string };
   upstream: Response;
   variant: DownloadVariant;
+  format?: ReturnType<typeof getCompressedDownloadFormat>;
   sizeLabel?: string;
   contentLength?: number;
 }) {
-  const extension = variant === "compressed" ? "webp" : asset.format.toLowerCase();
+  const extension = variant === "compressed" ? (format?.extension ?? "webp") : asset.format.toLowerCase();
   const suffix = variant === "compressed" && sizeLabel ? `-${sizeLabel.toLowerCase()}` : "";
   const headers = new Headers({
     "Cache-Control": "private, no-store, max-age=0",
@@ -59,7 +66,7 @@ function downloadHeaders({
   });
   const contentType = upstream.headers.get("content-type");
 
-  headers.set("Content-Type", variant === "compressed" ? "image/webp" : contentType ?? "application/octet-stream");
+  headers.set("Content-Type", variant === "compressed" ? (format?.contentType ?? "image/webp") : contentType ?? "application/octet-stream");
 
   if (contentLength) {
     headers.set("Content-Length", String(contentLength));
@@ -72,6 +79,24 @@ function downloadHeaders({
   }
 
   return headers;
+}
+
+async function compressImage(
+  buffer: Buffer,
+  size: ReturnType<typeof getCompressedDownloadSize>,
+  format: CompressedDownloadFormat,
+) {
+  const pipeline = sharp(buffer, { animated: true }).resize({ width: size.maxWidth, withoutEnlargement: true });
+
+  if (format === "png") {
+    return pipeline.png({ compressionLevel: 9, effort: 7 }).toBuffer();
+  }
+
+  if (format === "jpg") {
+    return pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+  }
+
+  return pipeline.webp({ quality: 82, effort: 4 }).toBuffer();
 }
 
 export async function POST(request: NextRequest, context: DownloadRouteContext) {
@@ -123,7 +148,7 @@ export async function POST(request: NextRequest, context: DownloadRouteContext) 
     return ok({
       data: {
         downloadId: download.id,
-        downloadUrl: `/api/assets/${asset.id}/download?downloadId=${download.id}&variant=${input.variant}&size=${input.size.id}`,
+        downloadUrl: `/api/assets/${asset.id}/download?downloadId=${download.id}&variant=${input.variant}&size=${input.size.id}&format=${input.format.id}`,
       },
     });
   } catch (error) {
@@ -138,6 +163,7 @@ export async function GET(request: NextRequest, context: DownloadRouteContext) {
     const downloadId = request.nextUrl.searchParams.get("downloadId") ?? "";
     const variant = request.nextUrl.searchParams.get("variant") === "compressed" ? "compressed" : "original";
     const size = getCompressedDownloadSize(request.nextUrl.searchParams.get("size"));
+    const format = getCompressedDownloadFormat(request.nextUrl.searchParams.get("format"));
 
     if (!downloadId) {
       return apiError("Download receipt is required", 400);
@@ -174,16 +200,14 @@ export async function GET(request: NextRequest, context: DownloadRouteContext) {
 
     if (variant === "compressed") {
       const buffer = Buffer.from(await upstream.arrayBuffer());
-      const compressed = await sharp(buffer, { animated: true })
-        .resize({ width: size.maxWidth, withoutEnlargement: true })
-        .webp({ quality: 82, effort: 4 })
-        .toBuffer();
+      const compressed = await compressImage(buffer, size, format.id);
 
       return new Response(new Uint8Array(compressed), {
         headers: downloadHeaders({
           asset: download.asset,
           upstream,
           variant,
+          format,
           sizeLabel: size.id,
           contentLength: compressed.byteLength,
         }),

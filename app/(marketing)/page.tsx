@@ -147,26 +147,26 @@ export default async function MarketingHomePage() {
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Choose one access level.</h2>
             <p className="mt-3 text-muted-foreground">Start free. Upgrade only when your work needs pro or premium scientific visuals.</p>
           </div>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
             {plans.map((plan) => (
-              <article key={plan.id} className="flex min-h-[360px] flex-col rounded-[var(--radius-lg)] border bg-card p-6 shadow-sm">
+              <article key={plan.id} className="flex min-h-[430px] flex-col rounded-[var(--radius-lg)] border bg-card p-7 shadow-sm sm:p-8">
                 <h3 className="text-2xl font-semibold">{plan.name}</h3>
-                <p className="mt-3 text-3xl font-semibold tracking-tight">{plan.displayPrice}</p>
-                <p className="mt-4 min-h-16 text-sm leading-6 text-muted-foreground">{plan.description}</p>
-                <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
+                <p className="mt-4 text-4xl font-semibold tracking-tight">{plan.displayPrice}</p>
+                <p className="mt-6 min-h-20 text-base leading-7 text-muted-foreground">{plan.description}</p>
+                <ul className="mt-7 flex-1 space-y-4 text-sm text-muted-foreground">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex gap-2">
+                    <li key={feature} className="flex gap-3">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
                 {plan.active ? (
-                  <Link href={getPlanCtaHref(plan.id)} className="mt-auto rounded-[var(--radius-md)] bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+                  <Link href={getPlanCtaHref(plan.id)} className="mt-8 rounded-[var(--radius-md)] bg-primary px-5 py-4 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
                     {plan.id === "FREE" ? "Start Browsing" : "Sign in to Upgrade"}
                   </Link>
                 ) : (
-                  <p className="mt-auto rounded-[var(--radius-md)] border bg-muted px-5 py-3 text-center text-sm font-semibold text-muted-foreground">
+                  <p className="mt-8 rounded-[var(--radius-md)] border bg-muted px-5 py-4 text-center text-sm font-semibold text-muted-foreground">
                     {plan.inactiveMessage}
                   </p>
                 )}

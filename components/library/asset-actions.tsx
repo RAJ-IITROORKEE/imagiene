@@ -18,7 +18,9 @@ import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
 import {
+  compressedDownloadFormats,
   compressedDownloadSizes,
+  type CompressedDownloadFormat,
   type CompressedDownloadSize,
   type DownloadVariant,
 } from "@/lib/asset-download-options";
@@ -76,6 +78,8 @@ export function AssetActions({
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [downloadVariant, setDownloadVariant] = useState<DownloadVariant>("original");
+  const [compressedFormat, setCompressedFormat] = useState<CompressedDownloadFormat>("webp");
   const [compressedSize, setCompressedSize] = useState<CompressedDownloadSize>("medium");
   const [isPending, startTransition] = useTransition();
 
@@ -94,19 +98,22 @@ export function AssetActions({
       return;
     }
 
+    const nextBookmarked = !bookmarked;
+
+    setBookmarked(nextBookmarked);
     startTransition(async () => {
       const response = await fetch(`/api/assets/${assetId}/bookmark`, {
-        method: bookmarked ? "DELETE" : "POST",
+        method: nextBookmarked ? "POST" : "DELETE",
       });
       const result = (await response.json()) as ApiResult<{ bookmarked: boolean }>;
 
       if (!response.ok) {
+        setBookmarked(!nextBookmarked);
         toast.error(result.error?.message ?? "Could not update bookmark");
         return;
       }
 
       setBookmarked(Boolean(result.data?.bookmarked));
-      toast.success(result.data?.bookmarked ? "Image saved" : "Image removed from saved items");
     });
   }
 
@@ -120,20 +127,26 @@ export function AssetActions({
       return;
     }
 
+    const nextLiked = !liked;
+    const nextLikeCount = Math.max(0, likeCount + (nextLiked ? 1 : -1));
+
+    setLiked(nextLiked);
+    setLikeCount(nextLikeCount);
     startTransition(async () => {
       const response = await fetch(`/api/assets/${assetId}/like`, {
-        method: liked ? "DELETE" : "POST",
+        method: nextLiked ? "POST" : "DELETE",
       });
       const result = (await response.json()) as ApiResult<{ liked: boolean; likeCount: number }>;
 
       if (!response.ok) {
+        setLiked(!nextLiked);
+        setLikeCount(likeCount);
         toast.error(result.error?.message ?? "Could not update like");
         return;
       }
 
       setLiked(Boolean(result.data?.liked));
       setLikeCount(result.data?.likeCount ?? likeCount);
-      toast.success(result.data?.liked ? "Liked image" : "Like removed");
     });
   }
 
@@ -143,10 +156,11 @@ export function AssetActions({
       return;
     }
 
+    setDownloadVariant("original");
     setDownloadOpen(true);
   }
 
-  function downloadAsset(variant: DownloadVariant) {
+  function downloadAsset() {
     if (!isLoaded) {
       return;
     }
@@ -165,7 +179,7 @@ export function AssetActions({
       const response = await fetch(`/api/assets/${assetId}/download`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ variant, size: compressedSize }),
+        body: JSON.stringify({ variant: downloadVariant, format: compressedFormat, size: compressedSize }),
       });
       const result = (await response.json()) as ApiResult<{ downloadUrl: string }>;
 
@@ -213,6 +227,8 @@ export function AssetActions({
   const upgradeLabel = accessLevel === "PREMIUM" ? "Upgrade to Premium" : accessLevel === "PRO" ? "Upgrade to Pro" : "Download unavailable";
   const selectedCompressedOption =
     compressedOptions.find((option) => option.id === compressedSize) ?? compressedOptions[1];
+  const selectedCompressedFormat =
+    compressedDownloadFormats.find((option) => option.id === compressedFormat) ?? compressedDownloadFormats[2];
 
   return (
     <>
@@ -220,8 +236,8 @@ export function AssetActions({
         <button
           type="button"
           onClick={toggleBookmark}
-          disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+          aria-pressed={bookmarked}
         >
           <Bookmark className="h-4 w-4" fill={bookmarked ? "currentColor" : "none"} />
           {bookmarked ? "Saved" : "Save"}
@@ -230,8 +246,8 @@ export function AssetActions({
         <button
           type="button"
           onClick={toggleLike}
-          disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-full border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+          aria-pressed={liked}
         >
           <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
           {liked ? "Liked" : "Like"}
@@ -297,34 +313,66 @@ export function AssetActions({
             <div className="grid gap-4 p-5">
               <button
                 type="button"
-                onClick={() => downloadAsset("original")}
-                disabled={isPending}
-                className="rounded-[1.25rem] border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-muted/30 disabled:opacity-60"
+                onClick={() => setDownloadVariant("original")}
+                className="rounded-[1.25rem] border bg-background p-4 text-left transition hover:border-primary/50 hover:bg-muted/30 aria-pressed:border-primary aria-pressed:bg-primary/10"
+                aria-pressed={downloadVariant === "original"}
               >
                 <span className="flex items-center justify-between gap-4">
                   <span>
-                    <span className="block font-semibold">Original quality</span>
+                    <span className="block font-semibold">Original</span>
                     <span className="mt-1 block text-sm text-muted-foreground">
                       {originalFormat} · {originalDimensions} · {originalFileSize}
                     </span>
                   </span>
-                  <Download className="h-5 w-5 text-primary" />
+                  {downloadVariant === "original" ? <Check className="h-5 w-5 text-primary" /> : <Download className="h-5 w-5 text-primary" />}
                 </span>
               </button>
 
               <div className="rounded-[1.25rem] border bg-muted/25 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold">Compressed WebP</p>
+                    <button
+                      type="button"
+                      onClick={() => setDownloadVariant("compressed")}
+                      className="text-left font-semibold transition hover:text-primary"
+                    >
+                      Compressed
+                    </button>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Smaller file for web, slides, notes, and quick sharing.
                     </p>
                   </div>
                   <span className="rounded-full border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    {selectedCompressedOption?.dimensions}
+                    {selectedCompressedFormat.label} · {selectedCompressedOption?.dimensions}
                   </span>
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {compressedDownloadFormats.map((option) => {
+                    const active = downloadVariant === "compressed" && compressedFormat === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          setDownloadVariant("compressed");
+                          setCompressedFormat(option.id);
+                        }}
+                        className="rounded-xl border bg-background p-3 text-left text-sm transition hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
+                        aria-pressed={active}
+                      >
+                        <span className="flex items-center justify-between gap-2 font-semibold">
+                          {option.label}
+                          {active ? <Check className="h-4 w-4 text-primary" /> : null}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          .{option.extension}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {compressedDownloadSizes.map((option) => {
                     const resolvedOption = compressedOptions.find((item) => item.id === option.id);
                     const active = compressedSize === option.id;
@@ -333,7 +381,10 @@ export function AssetActions({
                       <button
                         key={option.id}
                         type="button"
-                        onClick={() => setCompressedSize(option.id)}
+                        onClick={() => {
+                          setDownloadVariant("compressed");
+                          setCompressedSize(option.id);
+                        }}
                         className="rounded-xl border bg-background p-3 text-left text-sm transition hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
                         aria-pressed={active}
                       >
@@ -348,16 +399,16 @@ export function AssetActions({
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => downloadAsset("compressed")}
-                  disabled={isPending}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                >
-                  <Download className="h-4 w-4" />
-                  Download compressed WebP
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={downloadAsset}
+                disabled={isPending}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+              >
+                <Download className="h-4 w-4" />
+                Download {downloadVariant === "original" ? "original" : `compressed ${selectedCompressedFormat.label}`}
+              </button>
             </div>
           </div>
         </div>

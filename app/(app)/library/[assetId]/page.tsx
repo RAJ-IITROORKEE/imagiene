@@ -195,7 +195,7 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
                 <div>
                   <p className="font-semibold">Protected image access</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    Original files are delivered through the system. Choose original quality or a compressed WebP download.
+                    Original files are delivered through the system. Choose original quality or compressed PNG, JPG, or WebP.
                   </p>
                 </div>
               </div>
@@ -228,20 +228,25 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
               <div className="mt-4 grid gap-3">
                 <div className="flex items-center justify-between gap-4 rounded-[1rem] border bg-background p-4">
                   <div>
-                    <p className="font-semibold">Original quality</p>
+                    <p className="font-semibold">Original</p>
                     <p className="mt-1 text-sm text-muted-foreground">{asset.format.toUpperCase()} · {originalDimensions}</p>
                   </div>
                   <Download className="h-5 w-5 text-primary" />
                 </div>
-                {compressedOptions.map((option) => (
-                  <div key={option.id} className="flex items-center justify-between gap-4 rounded-[1rem] border bg-background p-4">
-                    <div>
-                      <p className="font-semibold">Compressed {option.label}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">WebP · {option.dimensions}</p>
-                    </div>
-                    <span className="text-sm font-semibold text-muted-foreground">{option.maxWidth}px</span>
+                <div className="flex items-center justify-between gap-4 rounded-[1rem] border bg-background p-4">
+                  <div>
+                    <p className="font-semibold">Compressed PNG / JPG</p>
+                    <p className="mt-1 text-sm text-muted-foreground">PNG or JPG · {compressedOptions[1]?.dimensions ?? "1280px wide"}</p>
                   </div>
-                ))}
+                  <span className="text-sm font-semibold text-muted-foreground">Smaller</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-[1rem] border bg-background p-4">
+                  <div>
+                    <p className="font-semibold">Compressed WebP</p>
+                    <p className="mt-1 text-sm text-muted-foreground">WebP · {compressedOptions[1]?.dimensions ?? "1280px wide"}</p>
+                  </div>
+                  <span className="text-sm font-semibold text-muted-foreground">Best web</span>
+                </div>
               </div>
             </div>
           </div>
