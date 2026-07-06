@@ -3,7 +3,7 @@
 import type { AssetAccessLevel, AssetType } from "@/lib/generated/prisma";
 import { CheckCircle2, FileImage, ImagePlus, Loader2, SearchCheck, ShieldCheck, Sparkles, UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -94,6 +94,15 @@ function assetTypeFromFile(file: File): AssetType {
   return "ILLUSTRATION";
 }
 
+function titleFromFileName(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^/.]+$/, "");
+  return withoutExtension.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function cleanTagInput(value: string) {
+  return value.trim().replace(/\s+/g, " ").slice(0, 60);
+}
+
 function readImageDimensions(file: File) {
   return new Promise<{ width?: number; height?: number }>((resolve) => {
     const url = URL.createObjectURL(file);
@@ -164,9 +173,10 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
     description: asset?.description ?? "",
     accessLevel: (asset?.accessLevel ?? "FREE") as AssetAccessLevel,
     categoryId: asset?.categoryId ?? "",
-    tagIds: asset?.tagIds ?? [],
+    tagNames: asset?.tags.map((tag) => tag.name) ?? [],
     isPublished: asset?.isPublished ?? false,
   });
+  const [tagInput, setTagInput] = useState("");
   const [slug, setSlug] = useState(asset?.slug ?? "");
   const [availability, setAvailability] = useState<AvailabilityState>({
     status: asset ? "available" : "idle",
@@ -250,7 +260,7 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
         setAvailability(
           payload.data.titleAvailable
             ? { status: "available", message: "Name is available. Slug will be generated automatically." }
-            : { status: "taken", message: "An asset with this name already exists." },
+            : { status: "taken", message: "title exists already, rename it okay" },
         );
       } catch {
         if (requestId === availabilityRequestRef.current) {
@@ -291,6 +301,15 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
       fileSize: file.size,
       mimeType: file.type || "image/*",
     });
+
+    if (!isEditing && !formState.title.trim()) {
+      const nextTitle = titleFromFileName(file.name);
+
+      if (nextTitle) {
+        setFormState((current) => ({ ...current, title: nextTitle }));
+        scheduleAvailabilityCheck(nextTitle);
+      }
+    }
   }
 
   function clearFile() {
@@ -314,13 +333,37 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
     }
   }
 
-  function toggleTag(tagId: string) {
+  function addTag(value: string) {
+    const nextTag = cleanTagInput(value);
+
+    if (nextTag.length < 2) {
+      return;
+    }
+
+    setFormState((current) => {
+      if (current.tagNames.some((tag) => tag.toLowerCase() === nextTag.toLowerCase()) || current.tagNames.length >= 20) {
+        return current;
+      }
+
+      return { ...current, tagNames: [...current.tagNames, nextTag] };
+    });
+    setTagInput("");
+  }
+
+  function removeTag(tagName: string) {
     setFormState((current) => ({
       ...current,
-      tagIds: current.tagIds.includes(tagId)
-        ? current.tagIds.filter((selectedTagId) => selectedTagId !== tagId)
-        : [...current.tagIds, tagId],
+      tagNames: current.tagNames.filter((tag) => tag.toLowerCase() !== tagName.toLowerCase()),
     }));
+  }
+
+  function onTagKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" && event.key !== ",") {
+      return;
+    }
+
+    event.preventDefault();
+    addTag(tagInput);
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -334,8 +377,8 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
     }
 
     if (availability.status === "taken") {
-      setError("Use a unique asset name before saving.");
-      toast.error("Asset name already exists");
+      setError("title exists already, rename it okay");
+      toast.error("title exists already, rename it okay");
       return;
     }
 
@@ -359,7 +402,7 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
           height: metadata?.height ? String(metadata.height) : "",
           fileSize: metadata?.fileSize ? String(metadata.fileSize) : "",
           categoryId: formState.categoryId,
-          tagIds: formState.tagIds,
+          tagNames: formState.tagNames,
           isPublished: formState.isPublished,
         };
 
@@ -514,26 +557,37 @@ export function AdminAssetForm({ asset, categories, tags }: AdminAssetFormProps)
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-semibold">Tags</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Select up to 20 searchable tags.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Type a tag and press Enter or comma. New tags are created automatically.</p>
               </div>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">{formState.tagIds.length} selected</span>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">{formState.tagNames.length} tags</span>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {tags.map((tag) => {
-                const selected = formState.tagIds.includes(tag.id);
-
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    disabled={detailsDisabled}
-                    onClick={() => toggleTag(tag.id)}
-                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${selected ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {tag.name}
+            <div className="mt-4 grid gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={onTagKeyDown}
+                  onBlur={() => addTag(tagInput)}
+                  disabled={detailsDisabled || formState.tagNames.length >= 20}
+                  list="asset-tag-suggestions"
+                  placeholder="Add tags like influenza, microscopy, cell biology"
+                  className="h-11 flex-1 rounded-2xl border bg-background px-4 text-sm outline-none transition focus:border-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                />
+                <button type="button" onClick={() => addTag(tagInput)} disabled={detailsDisabled || formState.tagNames.length >= 20} className="rounded-2xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+                  Add tag
+                </button>
+              </div>
+              <datalist id="asset-tag-suggestions">
+                {tags.map((tag) => <option key={tag.id} value={tag.name} />)}
+              </datalist>
+              <div className="flex min-h-10 flex-wrap gap-2">
+                {formState.tagNames.length ? formState.tagNames.map((tagName) => (
+                  <button key={tagName} type="button" onClick={() => removeTag(tagName)} disabled={detailsDisabled} className="inline-flex items-center gap-2 rounded-full border bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60">
+                    {tagName}
+                    <X className="h-3.5 w-3.5" />
                   </button>
-                );
-              })}
+                )) : <p className="text-sm text-muted-foreground">No tags yet. Assets can be saved without tags.</p>}
+              </div>
             </div>
           </div>
 

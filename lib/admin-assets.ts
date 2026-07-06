@@ -56,10 +56,59 @@ export async function validateAssetTitle(title: string, assetId?: string): Promi
   });
 
   if (titleMatch) {
-    return "An asset with this name already exists";
+    return "title exists already, rename it okay";
   }
 
   return null;
+}
+
+function cleanTagName(name: string) {
+  return name.trim().replace(/\s+/g, " ").slice(0, 60);
+}
+
+async function resolveUniqueTagSlug(name: string) {
+  const baseSlug = createSlug(name) || "tag";
+  let slug = baseSlug;
+  let suffix = 2;
+
+  while (await prisma.tag.findUnique({ where: { slug }, select: { id: true } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
+
+export async function resolveTagNames(tagNames: string[]) {
+  const names = [...new Map(tagNames.map(cleanTagName).filter((name) => name.length >= 2).map((name) => [name.toLowerCase(), name])).values()].slice(0, 20);
+
+  if (names.length === 0) {
+    return [];
+  }
+
+  const tagIds: string[] = [];
+
+  for (const name of names) {
+    const slug = createSlug(name) || "tag";
+    const existing = await prisma.tag.findUnique({ where: { slug }, select: { id: true } });
+
+    if (existing) {
+      tagIds.push(existing.id);
+      continue;
+    }
+
+    const tag = await prisma.tag.create({
+      data: {
+        name,
+        slug: await resolveUniqueTagSlug(name),
+        assetIds: [],
+      },
+      select: { id: true },
+    });
+    tagIds.push(tag.id);
+  }
+
+  return tagIds;
 }
 
 export async function resolveUniqueAssetSlug(title: string, assetId?: string) {

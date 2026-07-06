@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3, Eye, ImageIcon, Pencil, Plus, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Download, Eye, Heart, ImageIcon, Pencil, Plus, Search, Share2 } from "lucide-react";
 
 import { Pagination } from "@/components/library/pagination";
 import { assetAccessLevelLabels } from "@/constants/asset-types";
@@ -125,18 +125,19 @@ export default async function AdminAssetsPage({ searchParams }: AdminAssetsPageP
           <div className="border-b px-5 py-5">
             <h2 className="font-semibold">Asset Management</h2>
           </div>
-          <div className="hidden grid-cols-[72px_1.35fr_1fr_0.7fr_0.8fr_0.85fr_96px] gap-5 border-b bg-muted/45 px-5 py-3 text-xs font-semibold text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[72px_1.2fr_0.85fr_0.62fr_0.72fr_0.95fr_0.78fr_96px] gap-5 border-b bg-muted/45 px-5 py-3 text-xs font-semibold text-muted-foreground md:grid">
             <span>Thumbnail</span>
             <span>Asset Name</span>
             <span>Category</span>
             <span>Tier</span>
             <span>Status</span>
+            <span>Metrics</span>
             <span>Uploaded</span>
             <span className="text-right">Actions</span>
           </div>
           <div className="divide-y">
             {data.assets.length ? data.assets.map((asset) => (
-              <article key={asset.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-muted/35 md:grid-cols-[72px_1.35fr_1fr_0.7fr_0.8fr_0.85fr_96px] md:items-center md:gap-5">
+              <article key={asset.id} className="grid gap-4 px-5 py-4 transition-colors hover:bg-muted/35 md:grid-cols-[72px_1.2fr_0.85fr_0.62fr_0.72fr_0.95fr_0.78fr_96px] md:items-center md:gap-5">
                 <div
                   className="h-14 w-14 rounded-[var(--radius-md)] border bg-muted bg-cover bg-center"
                   style={{ backgroundImage: `url(${getProtectedAssetPreviewUrl(asset.id)})` }}
@@ -157,6 +158,11 @@ export default async function AdminAssetsPage({ searchParams }: AdminAssetsPageP
                     {statusLabel(asset)}
                   </span>
                 </p>
+                <div className="grid gap-1 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5"><Download className="h-3.5 w-3.5" />{asset._count.downloads.toLocaleString("en-IN")} downloads</span>
+                  <span className="inline-flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" />{asset.likeCount.toLocaleString("en-IN")} likes</span>
+                  <span className="inline-flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" />{asset.shareCount.toLocaleString("en-IN")} shares</span>
+                </div>
                 <p className="text-sm text-muted-foreground">{formatDate(asset.createdAt)}</p>
                 <div className="flex items-center gap-2 md:justify-end">
                   <Link href={`/admin/assets/${asset.id}`} className="rounded-[var(--radius-sm)] p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label={`Edit ${asset.title}`}>

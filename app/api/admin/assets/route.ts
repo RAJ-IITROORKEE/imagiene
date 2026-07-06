@@ -5,6 +5,7 @@ import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
 import {
   getAssetAvailability,
   resolveUniqueAssetSlug,
+  resolveTagNames,
   syncTagAssetLinks,
   validateAssetRelations,
   validateAssetTitle,
@@ -104,15 +105,17 @@ export async function POST(request: NextRequest) {
     }
 
     const input = createAssetSchema.parse(await request.json());
+    const { tagNames, ...assetInput } = input;
     const uniquenessError = await validateAssetTitle(input.title);
 
     if (uniquenessError) {
       return apiError(uniquenessError, 409);
     }
 
+    const tagIds = tagNames.length ? await resolveTagNames(tagNames) : input.tagIds;
     const relationError = await validateAssetRelations({
       categoryId: input.categoryId,
-      tagIds: input.tagIds,
+      tagIds,
     });
 
     if (relationError) {
@@ -121,7 +124,8 @@ export async function POST(request: NextRequest) {
 
     const asset = await prisma.asset.create({
       data: {
-        ...input,
+        ...assetInput,
+        tagIds,
         slug: await resolveUniqueAssetSlug(input.title),
         deletedAt: null,
       },

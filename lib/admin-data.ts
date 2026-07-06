@@ -1,6 +1,8 @@
 import type { Prisma } from "@/lib/generated/prisma";
 
 import { requireAdmin } from "@/lib/admin";
+import { countAssetLikesForAssets } from "@/lib/asset-likes";
+import { countAssetSharesForAssets } from "@/lib/asset-shares";
 import { countContactMessages, getRecentContactMessages, listContactMessages } from "@/lib/contact-messages";
 import { getRuntimePlans } from "@/lib/plan-settings";
 import { prisma } from "@/lib/prisma";
@@ -223,9 +225,18 @@ export async function getAdminAssets(params: AdminSearchParams) {
       },
     }),
   ]);
+  const assetIds = assets.map((asset) => asset.id);
+  const [likeCounts, shareCounts] = await Promise.all([
+    countAssetLikesForAssets(assetIds),
+    countAssetSharesForAssets(assetIds),
+  ]);
 
   return {
-    assets,
+    assets: assets.map((asset) => ({
+      ...asset,
+      likeCount: likeCounts[asset.id] ?? 0,
+      shareCount: shareCounts[asset.id] ?? 0,
+    })),
     page,
     total,
     pageCount: Math.ceil(total / DEFAULT_PAGE_SIZE),
@@ -284,7 +295,7 @@ export async function getAdminUsers(params: AdminSearchParams) {
       : undefined,
   };
   const skip = (page - 1) * pageSize;
-  const [total, users] = await Promise.all([
+  const [total, users, totalUsers, activeUsers, adminUsers, paidUsers] = await Promise.all([
     prisma.user.count({ where }),
     prisma.user.findMany({
       where,
@@ -293,10 +304,20 @@ export async function getAdminUsers(params: AdminSearchParams) {
       orderBy: { [sort]: dir },
       include: { _count: { select: { bookmarks: true, downloads: true, payments: true } } },
     }),
+    prisma.user.count(),
+    prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { role: "ADMIN" } }),
+    prisma.user.count({ where: { plan: { in: ["PRO", "PREMIUM"] } } }),
   ]);
 
   return {
     users,
+    stats: {
+      totalUsers,
+      activeUsers,
+      adminUsers,
+      paidUsers,
+    },
     total,
     page,
     pageSize,

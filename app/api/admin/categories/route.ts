@@ -2,9 +2,9 @@ import { NextRequest } from "next/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
 import { handleApiError, ok } from "@/lib/api-response";
+import { resolveUniqueCategorySlug } from "@/lib/admin-taxonomy";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createSlug } from "@/lib/slug";
 import { categoryQuerySchema, createCategorySchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const category = await prisma.category.create({
       data: {
         ...input,
-        slug: input.slug ?? createSlug(input.name),
+        slug: input.slug ?? await resolveUniqueCategorySlug(input.name),
       },
     });
 

@@ -12,6 +12,12 @@ type MongoFindResult = {
   };
 };
 
+type MongoAggregateResult = {
+  cursor?: {
+    firstBatch?: Array<{ _id?: string; count?: number }>;
+  };
+};
+
 export async function countAssetLikes(assetId: string) {
   const result = (await prisma.$runCommandRaw({
     count: ASSET_LIKES_COLLECTION,
@@ -19,6 +25,25 @@ export async function countAssetLikes(assetId: string) {
   })) as MongoCountResult;
 
   return result.n ?? 0;
+}
+
+export async function countAssetLikesForAssets(assetIds: string[]) {
+  if (assetIds.length === 0) {
+    return {} as Record<string, number>;
+  }
+
+  const result = (await prisma.$runCommandRaw({
+    aggregate: ASSET_LIKES_COLLECTION,
+    pipeline: [
+      { $match: { assetId: { $in: assetIds } } },
+      { $group: { _id: "$assetId", count: { $sum: 1 } } },
+    ],
+    cursor: {},
+  })) as MongoAggregateResult;
+
+  return Object.fromEntries(
+    (result.cursor?.firstBatch ?? []).map((item) => [item._id ?? "", item.count ?? 0]).filter(([assetId]) => assetId),
+  );
 }
 
 export async function isAssetLikedByUser(userId: string, assetId: string) {

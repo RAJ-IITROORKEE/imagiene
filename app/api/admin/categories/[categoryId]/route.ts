@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { createAdminAuditLog, requireAdmin } from "@/lib/admin";
+import { resolveUniqueCategorySlug } from "@/lib/admin-taxonomy";
 import { apiError, handleApiError, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -48,7 +49,10 @@ export async function PATCH(request: NextRequest, context: AdminCategoryRouteCon
     const input = updateCategorySchema.parse(await request.json());
     const category = await prisma.category.update({
       where: { id: params.categoryId },
-      data: input,
+      data: {
+        ...input,
+        slug: input.slug ?? (input.name ? await resolveUniqueCategorySlug(input.name, params.categoryId) : undefined),
+      },
     });
 
     await createAdminAuditLog({

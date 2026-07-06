@@ -198,7 +198,16 @@ export function AssetActions({
     const url = window.location.href;
 
     await navigator.clipboard.writeText(url);
+    await trackShare("copy");
     toast.success("Share link copied");
+  }
+
+  async function trackShare(channel: string) {
+    await fetch(`/api/assets/${assetId}/share`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel }),
+    }).catch(() => undefined);
   }
 
   async function nativeShare() {
@@ -210,16 +219,20 @@ export function AssetActions({
     }
 
     await navigator.share({ title, text: title, url });
+    await trackShare("native");
   }
 
   async function openInstagram() {
-    await copyShareLink();
+    await navigator.clipboard.writeText(window.location.href);
+    await trackShare("instagram");
+    toast.success("Share link copied");
     window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
   }
 
-  function openWhatsApp() {
+  async function openWhatsApp() {
     const text = shareText(title, window.location.href);
 
+    await trackShare("whatsapp");
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 

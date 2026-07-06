@@ -1,4 +1,4 @@
-import { AdminCategoryManager } from "@/components/admin/admin-category-manager";
+import { AdminCategoryDatabase } from "@/components/admin/admin-category-database";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getAdminCategoriesData } from "@/lib/admin-data";
 
@@ -10,8 +10,8 @@ export default async function AdminCategoriesPage() {
   return (
     <main className="px-6 py-8 sm:px-10 lg:px-12">
       <div className="mx-auto grid max-w-7xl gap-8">
-        <AdminPageHeader eyebrow="Taxonomy" title="Manage categories and tags" description="Organize assets with searchable categories and multi-select tags. Deletion is blocked while assets are still linked." />
-        <AdminCategoryManager categories={data.categories} tags={data.tags} />
+        <AdminPageHeader eyebrow="Taxonomy" title="Manage categories" description="Organize assets with searchable categories. Tags are typed directly inside each asset form and reused automatically." />
+        <AdminCategoryDatabase categories={data.categories} tags={data.tags} />
       </div>
     </main>
   );

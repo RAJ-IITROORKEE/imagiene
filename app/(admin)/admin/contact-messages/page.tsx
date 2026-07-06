@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, MessageSquareText } from "lucide-react";
 
+import { ContactMessageActions } from "@/components/admin/contact-message-actions";
 import { ContactMessageStatusSelect } from "@/components/admin/contact-message-status-select";
 import { AdminSearchForm } from "@/components/admin/admin-search-form";
 import { Pagination } from "@/components/library/pagination";
@@ -82,17 +83,18 @@ export default async function AdminContactMessagesPage({ searchParams }: AdminCo
         </div>
 
         <section className="overflow-hidden rounded-[var(--radius-lg)] border bg-card shadow-sm">
-          <div className="grid grid-cols-12 gap-4 border-b bg-muted/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="hidden grid-cols-12 gap-4 border-b bg-muted/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
             <span className="col-span-4">Sender</span>
-            <span className="col-span-4">Message</span>
+            <span className="col-span-3">Message</span>
             <span className="col-span-2">Received</span>
-            <span className="col-span-2 text-right">Status</span>
+            <span className="col-span-1 text-right">Status</span>
+            <span className="col-span-2 text-right">Actions</span>
           </div>
           <div className="divide-y">
             {data.messages.length ? (
               data.messages.map((message) => (
                 <article key={message.id} className="grid gap-4 px-5 py-5 md:grid-cols-12 md:items-start">
-                  <div className="md:col-span-4">
+                  <div className="md:col-span-3">
                     <div className="flex items-start gap-3">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-primary/10 text-primary">
                         <MessageSquareText className="h-4 w-4" />
@@ -116,8 +118,11 @@ export default async function AdminContactMessagesPage({ searchParams }: AdminCo
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{message.message}</p>
                   </div>
                   <p className="text-sm text-muted-foreground md:col-span-2">{formatDate(message.createdAt)}</p>
-                  <div className="md:col-span-2 md:justify-self-end">
+                  <div className="md:col-span-1 md:justify-self-end">
                     <ContactMessageStatusSelect messageId={message.id} status={message.status} />
+                  </div>
+                  <div className="md:col-span-2 md:justify-self-end">
+                    <ContactMessageActions message={message} />
                   </div>
                 </article>
               ))

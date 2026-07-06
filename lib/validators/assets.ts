@@ -33,11 +33,13 @@ export const createAssetSchema = z.object({
   fileSize: z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().optional()),
   categoryId: objectIdSchema,
   tagIds: z.array(objectIdSchema).max(20).default([]),
+  tagNames: z.array(z.string().trim().min(2).max(60)).max(20).default([]),
   isPublished: z.coerce.boolean().default(false),
 });
 
 export const updateAssetSchema = createAssetSchema.partial().extend({
   tagIds: z.array(objectIdSchema).max(20).optional(),
+  tagNames: z.array(z.string().trim().min(2).max(60)).max(20).optional(),
 });
 
 export const assetQuerySchema = paginationSchema.extend({
